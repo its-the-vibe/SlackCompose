@@ -109,7 +109,7 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		TaskID:   taskID,
 	}
 
-	if err := s.sendToPospit(ctx, poppitPayload); err != nil {
+	if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
 		log.Printf("Failed to send to Poppit: %v", err)
 		return
 	}
@@ -234,7 +234,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 		TaskID:   taskID,
 	}
 
-	if err := s.sendToPospit(ctx, poppitPayload); err != nil {
+	if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
 		log.Printf("Failed to send to Poppit: %v", err)
 		return
 	}

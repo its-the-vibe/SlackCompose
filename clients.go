@@ -8,8 +8,8 @@ import (
 	"net/http"
 )
 
-// sendToPospit sends a payload to the Poppit service
-func (s *Service) sendToPospit(ctx context.Context, payload PoppitPayload) error {
+// sendToPoppit sends a payload to the Poppit service
+func (s *Service) sendToPoppit(ctx context.Context, payload PoppitPayload) error {
 	data, err := json.Marshal(payload)
 	if err != nil {
 		return fmt.Errorf("failed to marshal payload: %w", err)
