@@ -145,6 +145,7 @@ func (s *Service) listenForPoppitOutput(ctx context.Context) {
 			return
 		case msg := <-ch:
 			if msg == nil {
+				log.Printf("Received nil message from Poppit output channel, possible connection issue")
 				continue
 			}
 			s.handlePoppitOutput(ctx, msg.Payload)
@@ -169,8 +170,19 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 
 	// Retrieve project name from task map
 	s.taskMapMu.RLock()
-	projectName := s.taskMap[cmdOutput.TaskID]
+	projectName, exists := s.taskMap[cmdOutput.TaskID]
 	s.taskMapMu.RUnlock()
+
+	// Clean up task map regardless of success or failure
+	defer func() {
+		s.taskMapMu.Lock()
+		delete(s.taskMap, cmdOutput.TaskID)
+		s.taskMapMu.Unlock()
+	}()
+
+	if !exists {
+		log.Printf("Warning: Task %s not found in task map, project name will not be included in metadata", cmdOutput.TaskID)
+	}
 
 	// Build metadata with project name if available
 	eventPayload := map[string]interface{}{
@@ -196,11 +208,6 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 	}
 
 	log.Printf("Sent output to SlackLiner for task %s", cmdOutput.TaskID)
-
-	// Clean up task map after sending output
-	s.taskMapMu.Lock()
-	delete(s.taskMap, cmdOutput.TaskID)
-	s.taskMapMu.Unlock()
 }
 
 // listenForReactions listens for emoji reactions from SlackRelay
