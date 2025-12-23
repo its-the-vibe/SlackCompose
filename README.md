@@ -9,28 +9,34 @@ SlackCompose is a Go service that enables running Docker Compose commands from S
 - **Poppit** - executes docker compose commands
 - **SlackLiner** - posts command output to Slack channels
 - **SlackRelay** - receives emoji reaction events from Slack
-- **Redis** - for pub/sub messaging between services
+- **Redis** - for pub/sub messaging and list-based queues between services
 
 ## Architecture Flow
 
 ```
 User in Slack → /docker-compose <project>
        ↓
-SlackCommandRelay → Redis (slack-commands channel)
+SlackCommandRelay → Redis Pub/Sub (slack-commands)
        ↓
-SlackCompose → Poppit (execute: docker compose ps)
+SlackCompose → Redis List RPUSH (poppit:notifications)
        ↓
-SlackCompose → SlackLiner (post output with metadata)
+Poppit executes: docker compose ps
        ↓
-Message posted to Slack #slack-compose channel
+Poppit → Redis Pub/Sub (poppit:command-output)
+       ↓
+SlackCompose → Redis List RPUSH (slack_messages)
+       ↓
+SlackLiner posts to Slack #slack-compose channel
 
 User reacts with ⬆️/⬇️/🔄
        ↓
-SlackRelay → Redis (slack-reactions channel)
+SlackRelay → Redis Pub/Sub (slack-reactions)
        ↓
 SlackCompose → Slack API (fetch message metadata)
        ↓
-SlackCompose → Poppit (execute: docker compose up/down/restart)
+SlackCompose → Redis List RPUSH (poppit:notifications)
+       ↓
+Poppit executes: docker compose up/down/restart
 ```
 
 ## Features
@@ -52,10 +58,11 @@ SlackCompose → Poppit (execute: docker compose up/down/restart)
 | `REDIS_ADDR` | Redis server address | `localhost:6379` |
 | `REDIS_PASSWORD` | Redis password | (empty) |
 | `REDIS_DB` | Redis database number | `0` |
-| `SLACK_COMMAND_CHANNEL` | Redis channel for Slack commands | `slack-commands` |
-| `SLACK_REACTION_CHANNEL` | Redis channel for Slack reactions | `slack-reactions` |
-| `POPPIT_URL` | URL of Poppit service | `http://localhost:8080` |
-| `SLACKLINER_URL` | URL of SlackLiner service | `http://localhost:8081` |
+| `SLACK_COMMAND_CHANNEL` | Redis Pub/Sub channel for Slack commands | `slack-commands` |
+| `SLACK_REACTION_CHANNEL` | Redis Pub/Sub channel for Slack reactions | `slack-reactions` |
+| `POPPIT_LIST_NAME` | Redis list name for Poppit notifications | `poppit:notifications` |
+| `POPPIT_OUTPUT_CHANNEL` | Redis Pub/Sub channel for Poppit command output | `poppit:command-output` |
+| `SLACKLINER_LIST_NAME` | Redis list name for SlackLiner messages | `slack_messages` |
 | `SLACK_TOKEN` | Slack API token (required) | - |
 | `SLACK_CHANNEL` | Slack channel to post to | `#slack-compose` |
 | `PROJECT_CONFIG_PATH` | Path to projects configuration file | `projects.json` |
@@ -160,9 +167,9 @@ Once the status is posted to Slack, you can control the project by reacting to t
 
 ## Integration Details
 
-### Poppit Payload
+### Poppit Integration
 
-When sending commands to Poppit, the following payload is used:
+SlackCompose sends commands to Poppit by pushing JSON payloads to a Redis list (default: `poppit:notifications`):
 
 ```json
 {
@@ -177,9 +184,20 @@ When sending commands to Poppit, the following payload is used:
 }
 ```
 
-### SlackLiner Payload
+Poppit executes the commands and publishes output to a Redis Pub/Sub channel (default: `poppit:command-output`):
 
-When posting to Slack via SlackLiner:
+```json
+{
+  "taskId": "task-12345",
+  "type": "slack-compose",
+  "command": "docker compose ps",
+  "output": "<command output>"
+}
+```
+
+### SlackLiner Integration
+
+SlackCompose sends messages to SlackLiner by pushing JSON payloads to a Redis list (default: `slack_messages`):
 
 ```json
 {
@@ -189,11 +207,14 @@ When posting to Slack via SlackLiner:
     "event_type": "slack-compose",
     "event_payload": {
       "taskId": "task-12345",
-      "project": "<project name>"
+      "project": "<project name>",
+      "command": "docker compose ps"
     }
   }
 }
 ```
+
+The metadata allows emoji reactions on messages to be linked back to the original project for executing follow-up commands.
 
 ## Implementation Notes
 
@@ -211,11 +232,15 @@ The service is organized into the following components:
 
 ### Key Design Decisions
 
-1. **Redis Pub/Sub**: Used for decoupled communication between services
+1. **Redis Architecture**: 
+   - Pub/Sub channels for event notifications (commands, reactions, output)
+   - Redis lists (RPUSH) for queuing messages to Poppit and SlackLiner
+   - Decoupled communication between all services
 2. **Metadata Tracking**: Slack message metadata links reactions to original projects
-3. **UUID Task IDs**: Each command execution gets a unique task ID for tracking
-4. **Scratch Image**: Final Docker image uses scratch for minimal size (~11MB binary)
-5. **Graceful Shutdown**: Context-based cancellation for clean service shutdown
+3. **Task Mapping**: In-memory map tracks taskID to projectName for correlating Poppit output
+4. **UUID Task IDs**: Each command execution gets a unique task ID for tracking
+5. **Scratch Image**: Final Docker image uses scratch for minimal size (~11MB binary)
+6. **Graceful Shutdown**: Context-based cancellation for clean service shutdown
 
 ### Project Configuration
 

@@ -13,8 +13,9 @@ services:
       - REDIS_DB=${REDIS_DB:-0}
       - SLACK_COMMAND_CHANNEL=${SLACK_COMMAND_CHANNEL:-slack-commands}
       - SLACK_REACTION_CHANNEL=${SLACK_REACTION_CHANNEL:-slack-reactions}
-      - POPPIT_URL=${POPPIT_URL:-http://poppit:8080}
-      - SLACKLINER_URL=${SLACKLINER_URL:-http://slackliner:8081}
+      - POPPIT_LIST_NAME=${POPPIT_LIST_NAME:-poppit:notifications}
+      - POPPIT_OUTPUT_CHANNEL=${POPPIT_OUTPUT_CHANNEL:-poppit:command-output}
+      - SLACKLINER_LIST_NAME=${SLACKLINER_LIST_NAME:-slack_messages}
       - SLACK_TOKEN=${SLACK_TOKEN}
       - SLACK_CHANNEL=${SLACK_CHANNEL:-#slack-compose}
       - PROJECT_CONFIG_PATH=${PROJECT_CONFIG_PATH:-/config/projects.json}

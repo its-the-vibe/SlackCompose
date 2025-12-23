@@ -49,3 +49,11 @@ type SlackMessage struct {
 	Timestamp string        `json:"ts"`
 	Metadata  SlackMetadata `json:"metadata"`
 }
+
+// PoppitCommandOutput represents output from Poppit command execution
+type PoppitCommandOutput struct {
+	TaskID  string `json:"taskId"`
+	Type    string `json:"type"`
+	Command string `json:"command"`
+	Output  string `json:"output"`
+}

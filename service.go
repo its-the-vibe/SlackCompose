@@ -16,6 +16,8 @@ type Service struct {
 	config      *Config
 	redisClient *RedisClient
 	slackClient *SlackClient
+	taskMap     map[string]string // maps taskID to projectName
+	taskMapMu   sync.RWMutex
 	wg          sync.WaitGroup
 }
 
@@ -25,6 +27,7 @@ func NewService(config *Config, redisClient *RedisClient) *Service {
 		config:      config,
 		redisClient: redisClient,
 		slackClient: NewSlackClient(config.SlackToken),
+		taskMap:     make(map[string]string),
 	}
 }
 
@@ -39,6 +42,10 @@ func (s *Service) Start(ctx context.Context) error {
 	// Start listening for Slack reactions
 	s.wg.Add(1)
 	go s.listenForReactions(ctx)
+
+	// Start listening for Poppit command output
+	s.wg.Add(1)
+	go s.listenForPoppitOutput(ctx)
 
 	log.Println("Service started successfully")
 	return nil
@@ -99,6 +106,11 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 	// Generate task ID
 	taskID := fmt.Sprintf("task-%s", uuid.New().String())
 
+	// Store task-to-project mapping
+	s.taskMapMu.Lock()
+	s.taskMap[taskID] = projectName
+	s.taskMapMu.Unlock()
+
 	// Send docker compose ps command to Poppit
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
@@ -115,24 +127,66 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 	}
 
 	log.Printf("Sent docker compose ps command for project %s (task: %s)", projectName, taskID)
+}
 
-	// Listen for Poppit output and send to SlackLiner
-	// In a real implementation, this would be done via a separate Redis channel
-	// For now, we'll simulate receiving the output
-	s.handlePoppitOutput(ctx, taskID, projectName, "docker compose ps output would appear here")
+// listenForPoppitOutput listens for command output from Poppit
+func (s *Service) listenForPoppitOutput(ctx context.Context) {
+	defer s.wg.Done()
+
+	pubsub := s.redisClient.Subscribe(ctx, s.config.PoppitOutputChannel)
+	defer pubsub.Close()
+
+	log.Printf("Listening for Poppit output on channel: %s", s.config.PoppitOutputChannel)
+
+	ch := pubsub.Channel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-ch:
+			if msg == nil {
+				continue
+			}
+			s.handlePoppitOutput(ctx, msg.Payload)
+		}
+	}
 }
 
 // handlePoppitOutput handles output from Poppit and sends it to SlackLiner
-func (s *Service) handlePoppitOutput(ctx context.Context, taskID, projectName, output string) {
+func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
+	var cmdOutput PoppitCommandOutput
+	if err := json.Unmarshal([]byte(payload), &cmdOutput); err != nil {
+		log.Printf("Failed to parse Poppit output: %v", err)
+		return
+	}
+
+	log.Printf("Received output for task %s: command=%s", cmdOutput.TaskID, cmdOutput.Command)
+
+	// Only handle output for slack-compose type
+	if cmdOutput.Type != "slack-compose" {
+		return
+	}
+
+	// Retrieve project name from task map
+	s.taskMapMu.RLock()
+	projectName := s.taskMap[cmdOutput.TaskID]
+	s.taskMapMu.RUnlock()
+
+	// Build metadata with project name if available
+	eventPayload := map[string]interface{}{
+		"taskId":  cmdOutput.TaskID,
+		"command": cmdOutput.Command,
+	}
+	if projectName != "" {
+		eventPayload["project"] = projectName
+	}
+
 	slackLinerPayload := SlackLinerPayload{
 		Channel: s.config.SlackChannel,
-		Text:    output,
+		Text:    fmt.Sprintf("```\n%s\n```", cmdOutput.Output),
 		Metadata: SlackMetadata{
-			EventType: "slack-compose",
-			EventPayload: map[string]interface{}{
-				"taskId":  taskID,
-				"project": projectName,
-			},
+			EventType:    "slack-compose",
+			EventPayload: eventPayload,
 		},
 	}
 
@@ -141,7 +195,12 @@ func (s *Service) handlePoppitOutput(ctx context.Context, taskID, projectName, o
 		return
 	}
 
-	log.Printf("Sent output to SlackLiner for task %s", taskID)
+	log.Printf("Sent output to SlackLiner for task %s", cmdOutput.TaskID)
+
+	// Clean up task map after sending output
+	s.taskMapMu.Lock()
+	delete(s.taskMap, cmdOutput.TaskID)
+	s.taskMapMu.Unlock()
 }
 
 // listenForReactions listens for emoji reactions from SlackRelay

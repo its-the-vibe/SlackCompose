@@ -16,8 +16,9 @@ type Config struct {
 	// Service configuration
 	SlackCommandChannel  string // Redis channel to listen for Slack commands
 	SlackReactionChannel string // Redis channel to listen for Slack reactions
-	PoppitURL            string // URL of Poppit service
-	SlackLinerURL        string // URL of SlackLiner service
+	PoppitListName       string // Redis list name for Poppit notifications
+	PoppitOutputChannel  string // Redis channel to listen for Poppit command output
+	SlackLinerListName   string // Redis list name for SlackLiner messages
 	SlackToken           string // Slack API token
 	SlackChannel         string // Slack channel to post to (e.g., #slack-compose)
 
@@ -42,8 +43,9 @@ func LoadConfig() (*Config, error) {
 		RedisDB:              getEnvInt("REDIS_DB", 0),
 		SlackCommandChannel:  getEnv("SLACK_COMMAND_CHANNEL", "slack-commands"),
 		SlackReactionChannel: getEnv("SLACK_REACTION_CHANNEL", "slack-reactions"),
-		PoppitURL:            getEnv("POPPIT_URL", "http://localhost:8080"),
-		SlackLinerURL:        getEnv("SLACKLINER_URL", "http://localhost:8081"),
+		PoppitListName:       getEnv("POPPIT_LIST_NAME", "poppit:notifications"),
+		PoppitOutputChannel:  getEnv("POPPIT_OUTPUT_CHANNEL", "poppit:command-output"),
+		SlackLinerListName:   getEnv("SLACKLINER_LIST_NAME", "slack_messages"),
 		SlackToken:           getEnv("SLACK_TOKEN", ""),
 		SlackChannel:         getEnv("SLACK_CHANNEL", "#slack-compose"),
 		ProjectConfigPath:    getEnv("PROJECT_CONFIG_PATH", "projects.json"),

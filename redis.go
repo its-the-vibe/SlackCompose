@@ -39,6 +39,11 @@ func (r *RedisClient) Publish(ctx context.Context, channel string, message inter
 	return r.client.Publish(ctx, channel, message).Err()
 }
 
+// RPush pushes a value to the right end of a Redis list
+func (r *RedisClient) RPush(ctx context.Context, key string, value interface{}) error {
+	return r.client.RPush(ctx, key, value).Err()
+}
+
 // Close closes the Redis connection
 func (r *RedisClient) Close() error {
 	return r.client.Close()
