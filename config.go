@@ -14,12 +14,12 @@ type Config struct {
 	RedisDB       int
 
 	// Service configuration
-	SlackCommandChannel string // Redis channel to listen for Slack commands
+	SlackCommandChannel  string // Redis channel to listen for Slack commands
 	SlackReactionChannel string // Redis channel to listen for Slack reactions
-	PoppitURL           string // URL of Poppit service
-	SlackLinerURL       string // URL of SlackLiner service
-	SlackToken          string // Slack API token
-	SlackChannel        string // Slack channel to post to (e.g., #slack-compose)
+	PoppitURL            string // URL of Poppit service
+	SlackLinerURL        string // URL of SlackLiner service
+	SlackToken           string // Slack API token
+	SlackChannel         string // Slack channel to post to (e.g., #slack-compose)
 
 	// Project configuration file path
 	ProjectConfigPath string
