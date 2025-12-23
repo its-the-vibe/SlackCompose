@@ -11,6 +11,28 @@ SlackCompose is a Go service that enables running Docker Compose commands from S
 - **SlackRelay** - receives emoji reaction events from Slack
 - **Redis** - for pub/sub messaging between services
 
+## Architecture Flow
+
+```
+User in Slack → /docker-compose <project>
+       ↓
+SlackCommandRelay → Redis (slack-commands channel)
+       ↓
+SlackCompose → Poppit (execute: docker compose ps)
+       ↓
+SlackCompose → SlackLiner (post output with metadata)
+       ↓
+Message posted to Slack #slack-compose channel
+
+User reacts with ⬆️/⬇️/🔄
+       ↓
+SlackRelay → Redis (slack-reactions channel)
+       ↓
+SlackCompose → Slack API (fetch message metadata)
+       ↓
+SlackCompose → Poppit (execute: docker compose up/down/restart)
+```
+
 ## Features
 
 - Execute `docker compose ps` via Slack command `/docker-compose <project-name>`
@@ -152,6 +174,35 @@ When posting to Slack via SlackLiner:
   }
 }
 ```
+
+## Implementation Notes
+
+### Service Architecture
+
+The service is organized into the following components:
+
+- **main.go** - Application entry point with graceful shutdown handling
+- **config.go** - Configuration management from environment variables and project config file
+- **redis.go** - Redis client wrapper for pub/sub operations
+- **service.go** - Main service logic with command and reaction handlers
+- **slack.go** - Slack API client for retrieving messages with metadata
+- **clients.go** - HTTP clients for Poppit and SlackLiner integration
+- **types.go** - Data structures for all payloads and messages
+
+### Key Design Decisions
+
+1. **Redis Pub/Sub**: Used for decoupled communication between services
+2. **Metadata Tracking**: Slack message metadata links reactions to original projects
+3. **UUID Task IDs**: Each command execution gets a unique task ID for tracking
+4. **Scratch Image**: Final Docker image uses scratch for minimal size (~11MB binary)
+5. **Graceful Shutdown**: Context-based cancellation for clean service shutdown
+
+### Project Configuration
+
+Projects are mapped to working directories via a JSON configuration file. This allows:
+- Dynamic project management without code changes
+- Security by limiting which directories can be accessed
+- Clear mapping between Slack-friendly names and filesystem paths
 
 ## Requirements
 
