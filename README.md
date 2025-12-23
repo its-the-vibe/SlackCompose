@@ -81,14 +81,26 @@ See `projects.json.example` for a sample configuration.
 
 ## Building
 
-### Local Build
+### Using Make
 
+The project includes a Makefile for common tasks:
+
+```bash
+make build        # Build the application
+make test         # Run tests
+make lint         # Format code and run checks
+make docker-build # Build Docker image
+make help         # Show all available targets
+```
+
+### Manual Build
+
+Local build:
 ```bash
 go build -o slackcompose
 ```
 
-### Docker Build
-
+Docker build:
 ```bash
 docker build -t slackcompose .
 ```
@@ -97,6 +109,12 @@ docker build -t slackcompose .
 
 ### Locally
 
+Using Make:
+```bash
+make run
+```
+
+Or manually:
 ```bash
 export SLACK_TOKEN=xoxb-your-slack-token
 export REDIS_ADDR=localhost:6379
@@ -115,6 +133,8 @@ export REDIS_PASSWORD=your-redis-password
 
 3. Start the service:
    ```bash
+   make docker-run
+   # OR
    docker-compose up -d
    ```
 
