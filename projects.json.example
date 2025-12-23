@@ -1,0 +1,10 @@
+[
+  {
+    "name": "example-project",
+    "working_dir": "/path/to/example-project"
+  },
+  {
+    "name": "another-project",
+    "working_dir": "/path/to/another-project"
+  }
+]

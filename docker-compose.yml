@@ -1,0 +1,23 @@
+version: '3.8'
+
+services:
+  slackcompose:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: slackcompose
+    restart: unless-stopped
+    environment:
+      - REDIS_ADDR=${REDIS_ADDR:-localhost:6379}
+      - REDIS_PASSWORD=${REDIS_PASSWORD}
+      - REDIS_DB=${REDIS_DB:-0}
+      - SLACK_COMMAND_CHANNEL=${SLACK_COMMAND_CHANNEL:-slack-commands}
+      - SLACK_REACTION_CHANNEL=${SLACK_REACTION_CHANNEL:-slack-reactions}
+      - POPPIT_URL=${POPPIT_URL:-http://poppit:8080}
+      - SLACKLINER_URL=${SLACKLINER_URL:-http://slackliner:8081}
+      - SLACK_TOKEN=${SLACK_TOKEN}
+      - SLACK_CHANNEL=${SLACK_CHANNEL:-#slack-compose}
+      - PROJECT_CONFIG_PATH=${PROJECT_CONFIG_PATH:-/config/projects.json}
+    volumes:
+      - ./projects.json:/config/projects.json:ro
+    network_mode: host
