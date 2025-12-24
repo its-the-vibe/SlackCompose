@@ -12,11 +12,23 @@ type SlackCommand struct {
 
 // SlackReaction represents an emoji reaction event from SlackRelay
 type SlackReaction struct {
-	Type      string `json:"type"`
-	Reaction  string `json:"reaction"`
-	UserID    string `json:"user_id"`
-	Channel   string `json:"channel"`
-	MessageTS string `json:"message_ts"`
+	Type  string             `json:"type"`
+	Event SlackReactionEvent `json:"event"`
+}
+
+// SlackReactionEvent contains the reaction event details
+type SlackReactionEvent struct {
+	Type     string            `json:"type"`
+	User     string            `json:"user"`
+	Reaction string            `json:"reaction"`
+	Item     SlackReactionItem `json:"item"`
+}
+
+// SlackReactionItem contains the message item that was reacted to
+type SlackReactionItem struct {
+	Type    string `json:"type"`
+	Channel string `json:"channel"`
+	TS      string `json:"ts"`
 }
 
 // PoppitPayload is the payload sent to Poppit service

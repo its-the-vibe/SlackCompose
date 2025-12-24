@@ -241,15 +241,15 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 		return
 	}
 
-	log.Printf("Received reaction: %s on message %s in channel %s", reaction.Reaction, reaction.MessageTS, reaction.Channel)
+	log.Printf("Received reaction: %s on message %s in channel %s", reaction.Event.Reaction, reaction.Event.Item.TS, reaction.Event.Item.Channel)
 
 	// Only handle specific reactions
-	if reaction.Reaction != "up_arrow" && reaction.Reaction != "down_arrow" && reaction.Reaction != "arrows_counterclockwise" {
+	if reaction.Event.Reaction != "up_arrow" && reaction.Event.Reaction != "down_arrow" && reaction.Event.Reaction != "arrows_counterclockwise" {
 		return
 	}
 
 	// Retrieve message from Slack to get metadata
-	message, err := s.slackClient.GetMessage(ctx, reaction.Channel, reaction.MessageTS)
+	message, err := s.slackClient.GetMessage(ctx, reaction.Event.Item.Channel, reaction.Event.Item.TS)
 	if err != nil {
 		log.Printf("Failed to retrieve message: %v", err)
 		return
@@ -276,7 +276,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 
 	// Determine command based on reaction
 	var command string
-	switch reaction.Reaction {
+	switch reaction.Event.Reaction {
 	case "up_arrow":
 		command = "docker compose up -d"
 	case "down_arrow":
