@@ -11,6 +11,12 @@ import (
 	"github.com/google/uuid"
 )
 
+const (
+	EmojiUpArrow                = "arrow_up"
+	EmojiDownArrow              = "arrow_down"
+	EmojiArrowsCounterClockwise = "arrows_counterclockwise"
+)
+
 // Service is the main service handler
 type Service struct {
 	config      *Config
@@ -244,7 +250,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	log.Printf("Received reaction: %s on message %s in channel %s", reaction.Event.Reaction, reaction.Event.Item.TS, reaction.Event.Item.Channel)
 
 	// Only handle specific reactions
-	if reaction.Event.Reaction != "up_arrow" && reaction.Event.Reaction != "down_arrow" && reaction.Event.Reaction != "arrows_counterclockwise" {
+	if reaction.Event.Reaction != EmojiUpArrow && reaction.Event.Reaction != EmojiDownArrow && reaction.Event.Reaction != EmojiArrowsCounterClockwise {
 		return
 	}
 
@@ -277,11 +283,11 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	// Determine command based on reaction
 	var command string
 	switch reaction.Event.Reaction {
-	case "up_arrow":
+	case EmojiUpArrow:
 		command = "docker compose up -d"
-	case "down_arrow":
+	case EmojiDownArrow:
 		command = "docker compose down"
-	case "arrows_counterclockwise":
+	case EmojiArrowsCounterClockwise:
 		command = "docker compose restart"
 	}
 
