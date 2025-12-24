@@ -82,12 +82,12 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		return
 	}
 
-	// Only handle /docker-compose commands
-	if cmd.Command != "/docker-compose" {
+	// Only handle /slack-compose commands
+	if cmd.Command != "/slack-compose" {
 		return
 	}
 
-	log.Printf("Received /docker-compose command with text: %s", cmd.Text)
+	log.Printf("Received /slack-compose command with text: %s", cmd.Text)
 
 	// Extract project name from command text
 	projectName := strings.TrimSpace(cmd.Text)

@@ -5,7 +5,7 @@ Run Docker Compose commands from Slack
 ## Overview
 
 SlackCompose is a Go service that enables running Docker Compose commands from Slack. It integrates with:
-- **SlackCommandRelay** - receives `/docker-compose` commands from Slack
+- **SlackCommandRelay** - receives `/slack-compose` commands from Slack
 - **Poppit** - executes docker compose commands
 - **SlackLiner** - posts command output to Slack channels
 - **SlackRelay** - receives emoji reaction events from Slack
@@ -14,7 +14,7 @@ SlackCompose is a Go service that enables running Docker Compose commands from S
 ## Architecture Flow
 
 ```
-User in Slack → /docker-compose <project>
+User in Slack → /slack-compose <project>
        ↓
 SlackCommandRelay → Redis Pub/Sub (slack-commands)
        ↓
@@ -41,7 +41,7 @@ Poppit executes: docker compose up/down/restart
 
 ## Features
 
-- Execute `docker compose ps` via Slack command `/docker-compose <project-name>`
+- Execute `docker compose ps` via Slack command `/slack-compose <project-name>`
 - Control projects via emoji reactions:
   - ⬆️ (up_arrow) - runs `docker compose up -d`
   - ⬇️ (down_arrow) - runs `docker compose down`
@@ -149,10 +149,10 @@ export REDIS_PASSWORD=your-redis-password
 
 ### Via Slack Command
 
-In Slack, use the `/docker-compose` command:
+In Slack, use the `/slack-compose` command:
 
 ```
-/docker-compose my-project
+/slack-compose my-project
 ```
 
 This will execute `docker compose ps` for the specified project and post the output to the configured Slack channel.
