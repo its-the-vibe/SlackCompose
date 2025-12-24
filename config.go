@@ -46,7 +46,7 @@ func LoadConfig() (*Config, error) {
 		PoppitListName:       getEnv("POPPIT_LIST_NAME", "poppit:notifications"),
 		PoppitOutputChannel:  getEnv("POPPIT_OUTPUT_CHANNEL", "poppit:command-output"),
 		SlackLinerListName:   getEnv("SLACKLINER_LIST_NAME", "slack_messages"),
-		SlackToken:           getEnv("SLACK_TOKEN", ""),
+		SlackToken:           getEnv("SLACK_BOT_TOKEN", ""),
 		SlackChannel:         getEnv("SLACK_CHANNEL", "#slack-compose"),
 		ProjectConfigPath:    getEnv("PROJECT_CONFIG_PATH", "projects.json"),
 	}
@@ -58,7 +58,7 @@ func LoadConfig() (*Config, error) {
 
 	// Validate required fields
 	if config.SlackToken == "" {
-		return nil, fmt.Errorf("SLACK_TOKEN is required")
+		return nil, fmt.Errorf("SLACK_BOT_TOKEN is required")
 	}
 
 	return config, nil

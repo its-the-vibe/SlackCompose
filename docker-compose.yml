@@ -5,20 +5,22 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
+    read_only: true
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
     container_name: slackcompose
     restart: unless-stopped
     environment:
-      - REDIS_ADDR=${REDIS_ADDR:-localhost:6379}
+      - REDIS_ADDR=${REDIS_ADDR:-host.docker.internal:6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD}
       - REDIS_DB=${REDIS_DB:-0}
       - SLACK_COMMAND_CHANNEL=${SLACK_COMMAND_CHANNEL:-slack-commands}
-      - SLACK_REACTION_CHANNEL=${SLACK_REACTION_CHANNEL:-slack-reactions}
+      - SLACK_REACTION_CHANNEL=${SLACK_REACTION_CHANNEL:-slack-relay-reaction-added}
       - POPPIT_LIST_NAME=${POPPIT_LIST_NAME:-poppit:notifications}
       - POPPIT_OUTPUT_CHANNEL=${POPPIT_OUTPUT_CHANNEL:-poppit:command-output}
       - SLACKLINER_LIST_NAME=${SLACKLINER_LIST_NAME:-slack_messages}
-      - SLACK_TOKEN=${SLACK_TOKEN}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_CHANNEL=${SLACK_CHANNEL:-#slack-compose}
       - PROJECT_CONFIG_PATH=${PROJECT_CONFIG_PATH:-/config/projects.json}
     volumes:
       - ./projects.json:/config/projects.json:ro
-    network_mode: host
