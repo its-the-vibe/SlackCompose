@@ -28,7 +28,7 @@ SlackCompose → Redis List RPUSH (slack_messages)
        ↓
 SlackLiner posts to Slack #slack-compose channel
 
-User reacts with ⬆️/⬇️/🔄
+User reacts with ⬆️/⬇️/🔄/📄
        ↓
 SlackRelay → Redis Pub/Sub (slack-reactions)
        ↓
@@ -36,7 +36,7 @@ SlackCompose → Slack API (fetch message metadata)
        ↓
 SlackCompose → Redis List RPUSH (poppit:notifications)
        ↓
-Poppit executes: docker compose up/down/restart
+Poppit executes: docker compose up/down/restart/logs
 ```
 
 ## Features
@@ -46,6 +46,7 @@ Poppit executes: docker compose up/down/restart
   - ⬆️ (up_arrow) - runs `docker compose up -d`
   - ⬇️ (down_arrow) - runs `docker compose down`
   - 🔄 (arrows_counterclockwise) - runs `docker compose restart`
+  - 📄 (page_with_curl) - runs `docker compose logs`
 - Project configuration via JSON file
 - Built with scratch Docker image for minimal size
 
@@ -164,6 +165,7 @@ Once the status is posted to Slack, you can control the project by reacting to t
 - React with ⬆️ to run `docker compose up -d`
 - React with ⬇️ to run `docker compose down`  
 - React with 🔄 to run `docker compose restart`
+- React with 📄 to run `docker compose logs`
 
 ## Integration Details
 

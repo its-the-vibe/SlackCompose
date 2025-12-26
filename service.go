@@ -15,7 +15,16 @@ const (
 	EmojiUpArrow                = "arrow_up"
 	EmojiDownArrow              = "arrow_down"
 	EmojiArrowsCounterClockwise = "arrows_counterclockwise"
+	EmojiPageWithCurl           = "page_with_curl"
 )
+
+// emojiToCommand maps supported emoji reactions to their docker compose commands
+var emojiToCommand = map[string]string{
+	EmojiUpArrow:                "docker compose up -d",
+	EmojiDownArrow:              "docker compose down",
+	EmojiArrowsCounterClockwise: "docker compose restart",
+	EmojiPageWithCurl:           "docker compose logs",
+}
 
 // Service is the main service handler
 type Service struct {
@@ -249,8 +258,9 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 
 	log.Printf("Received reaction: %s on message %s in channel %s", reaction.Event.Reaction, reaction.Event.Item.TS, reaction.Event.Item.Channel)
 
-	// Only handle specific reactions
-	if reaction.Event.Reaction != EmojiUpArrow && reaction.Event.Reaction != EmojiDownArrow && reaction.Event.Reaction != EmojiArrowsCounterClockwise {
+	// Check if this is a supported reaction
+	command, supported := emojiToCommand[reaction.Event.Reaction]
+	if !supported {
 		return
 	}
 
@@ -278,17 +288,6 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	if !exists {
 		log.Printf("Unknown project in metadata: %s", projectName)
 		return
-	}
-
-	// Determine command based on reaction
-	var command string
-	switch reaction.Event.Reaction {
-	case EmojiUpArrow:
-		command = "docker compose up -d"
-	case EmojiDownArrow:
-		command = "docker compose down"
-	case EmojiArrowsCounterClockwise:
-		command = "docker compose restart"
 	}
 
 	log.Printf("Executing %s for project %s", command, projectName)
