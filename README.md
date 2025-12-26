@@ -46,7 +46,7 @@ Poppit executes: docker compose up/down/restart/logs
   - ⬆️ (up_arrow) - runs `docker compose up -d`
   - ⬇️ (down_arrow) - runs `docker compose down`
   - 🔄 (arrows_counterclockwise) - runs `docker compose restart`
-  - 📄 (page_with_curl) - runs `docker compose logs`
+  - 📄 (page_facing_up) - runs `docker compose logs`
 - Project configuration via JSON file
 - Built with scratch Docker image for minimal size
 

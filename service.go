@@ -15,7 +15,7 @@ const (
 	EmojiUpArrow                = "arrow_up"
 	EmojiDownArrow              = "arrow_down"
 	EmojiArrowsCounterClockwise = "arrows_counterclockwise"
-	EmojiPageWithCurl           = "page_with_curl"
+	EmojiPageFacingUp           = "page_facing_up"
 )
 
 // emojiToCommand maps supported emoji reactions to their docker compose commands
@@ -23,7 +23,7 @@ var emojiToCommand = map[string]string{
 	EmojiUpArrow:                "docker compose up -d",
 	EmojiDownArrow:              "docker compose down",
 	EmojiArrowsCounterClockwise: "docker compose restart",
-	EmojiPageWithCurl:           "docker compose logs",
+	EmojiPageFacingUp:           "docker compose logs",
 }
 
 // Service is the main service handler
