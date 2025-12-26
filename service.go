@@ -15,6 +15,7 @@ const (
 	EmojiUpArrow                = "arrow_up"
 	EmojiDownArrow              = "arrow_down"
 	EmojiArrowsCounterClockwise = "arrows_counterclockwise"
+	EmojiPageWithCurl           = "page_with_curl"
 )
 
 // Service is the main service handler
@@ -250,7 +251,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	log.Printf("Received reaction: %s on message %s in channel %s", reaction.Event.Reaction, reaction.Event.Item.TS, reaction.Event.Item.Channel)
 
 	// Only handle specific reactions
-	if reaction.Event.Reaction != EmojiUpArrow && reaction.Event.Reaction != EmojiDownArrow && reaction.Event.Reaction != EmojiArrowsCounterClockwise {
+	if reaction.Event.Reaction != EmojiUpArrow && reaction.Event.Reaction != EmojiDownArrow && reaction.Event.Reaction != EmojiArrowsCounterClockwise && reaction.Event.Reaction != EmojiPageWithCurl {
 		return
 	}
 
@@ -289,6 +290,8 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 		command = "docker compose down"
 	case EmojiArrowsCounterClockwise:
 		command = "docker compose restart"
+	case EmojiPageWithCurl:
+		command = "docker compose logs"
 	}
 
 	log.Printf("Executing %s for project %s", command, projectName)
