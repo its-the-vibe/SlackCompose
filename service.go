@@ -22,6 +22,13 @@ const (
 	ActionDockerPS      = "docker_ps"
 	ActionDockerLogs    = "docker_logs"
 
+	// Block Kit element IDs
+	BlockIDProjectBlock  = "project_block"
+	ActionIDSlackCompose = "SlackCompose"
+
+	// Git branch reference
+	DefaultGitBranch = "refs/heads/main"
+
 	// DefaultTTLSeconds is the default time-to-live for SlackLiner messages (24 hours)
 	DefaultTTLSeconds = 86400
 )
@@ -143,7 +150,7 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 	// Send docker compose ps command to Poppit
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
-		Branch:   "refs/heads/main",
+		Branch:   DefaultGitBranch,
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
 		Commands: []string{"docker compose ps"},
@@ -325,7 +332,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	// Include thread_ts and channel metadata to enable posting command output as thread replies in the correct channel
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
-		Branch:   "refs/heads/main",
+		Branch:   DefaultGitBranch,
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
 		Commands: []string{command},
@@ -362,10 +369,10 @@ func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
 		},
 		{
 			"type":     "input",
-			"block_id": "project_block",
+			"block_id": BlockIDProjectBlock,
 			"element": map[string]interface{}{
 				"type":      "external_select",
-				"action_id": "SlackCompose",
+				"action_id": ActionIDSlackCompose,
 				"placeholder": map[string]interface{}{
 					"type": "plain_text",
 					"text": "Search projects...",
@@ -457,6 +464,10 @@ func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
 		Channel: channel,
 		Blocks:  blocks,
 		TTL:     DefaultTTLSeconds,
+		Metadata: SlackMetadata{
+			EventType:    "slack-compose-dialog",
+			EventPayload: map[string]interface{}{},
+		},
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
@@ -502,8 +513,8 @@ func (s *Service) handleBlockAction(ctx context.Context, payload string) {
 
 	// Extract the selected project from state
 	projectName := ""
-	if state, ok := action.State.Values["project_block"]; ok {
-		if slackCompose, ok := state["SlackCompose"]; ok {
+	if state, ok := action.State.Values[BlockIDProjectBlock]; ok {
+		if slackCompose, ok := state[ActionIDSlackCompose]; ok {
 			if slackCompose.SelectedOption != nil {
 				projectName = slackCompose.SelectedOption.Value
 				slog.Debug("Extracted project from state", "project", projectName)
@@ -554,7 +565,7 @@ func (s *Service) handleBlockAction(ctx context.Context, payload string) {
 		// Send command to Poppit
 		poppitPayload := PoppitPayload{
 			Repo:     projectName,
-			Branch:   "refs/heads/main",
+			Branch:   DefaultGitBranch,
 			Type:     "slack-compose",
 			Dir:      project.WorkingDir,
 			Commands: []string{command},
