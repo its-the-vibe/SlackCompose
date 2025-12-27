@@ -122,7 +122,7 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		Branch:   "refs/heads/main",
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
-		Commands: []string{"docker compose ps"},
+		Commands: []string{"docker compose ps --format json"},
 		Metadata: map[string]interface{}{
 			"project": projectName,
 		},
