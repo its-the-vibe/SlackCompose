@@ -14,6 +14,9 @@ const (
 	EmojiDownArrow              = "arrow_down"
 	EmojiArrowsCounterClockwise = "arrows_counterclockwise"
 	EmojiPageFacingUp           = "page_facing_up"
+
+	// DefaultTTLSeconds is the default time-to-live for SlackLiner messages (24 hours)
+	DefaultTTLSeconds = 86400
 )
 
 // emojiToCommand maps supported emoji reactions to their docker compose commands
@@ -199,7 +202,7 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 			EventType:    "slack-compose",
 			EventPayload: eventPayload,
 		},
-		TTL: 86400, // 24 hours in seconds
+		TTL: DefaultTTLSeconds,
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
