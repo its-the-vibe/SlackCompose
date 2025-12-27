@@ -259,6 +259,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	slog.Debug("Received reaction", "emoji", reaction.Event.Reaction, "message", reaction.Event.Item.TS, "channel", reaction.Event.Item.Channel)
 
 	// Check if this is a supported reaction
+	// Unsupported reactions are logged at DEBUG level to avoid cluttering logs with reactions we don't care about
 	command, supported := emojiToCommand[reaction.Event.Reaction]
 	if !supported {
 		slog.Debug("Unsupported reaction, ignoring", "emoji", reaction.Event.Reaction)
