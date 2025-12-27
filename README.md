@@ -67,6 +67,7 @@ Poppit executes: docker compose up/down/restart/logs
 | `SLACK_TOKEN` | Slack API token (required) | - |
 | `SLACK_CHANNEL` | Slack channel to post to | `#slack-compose` |
 | `PROJECT_CONFIG_PATH` | Path to projects configuration file | `projects.json` |
+| `LOG_LEVEL` | Logging level: `DEBUG`, `INFO`, `WARN`, `ERROR` | `INFO` |
 
 ### Project Configuration
 

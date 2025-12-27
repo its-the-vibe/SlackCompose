@@ -4,7 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"log"
+	"log/slog"
 	"strings"
 	"sync"
 
@@ -48,7 +48,7 @@ func NewService(config *Config, redisClient *RedisClient) *Service {
 
 // Start starts the service
 func (s *Service) Start(ctx context.Context) error {
-	log.Println("Service starting...")
+	slog.Info("Service starting...")
 
 	// Start listening for Slack commands
 	s.wg.Add(1)
@@ -62,7 +62,7 @@ func (s *Service) Start(ctx context.Context) error {
 	s.wg.Add(1)
 	go s.listenForPoppitOutput(ctx)
 
-	log.Println("Service started successfully")
+	slog.Info("Service started successfully")
 	return nil
 }
 
@@ -73,7 +73,7 @@ func (s *Service) listenForCommands(ctx context.Context) {
 	pubsub := s.redisClient.Subscribe(ctx, s.config.SlackCommandChannel)
 	defer pubsub.Close()
 
-	log.Printf("Listening for commands on channel: %s", s.config.SlackCommandChannel)
+	slog.Info("Listening for commands", "channel", s.config.SlackCommandChannel)
 
 	ch := pubsub.Channel()
 	for {
@@ -93,7 +93,7 @@ func (s *Service) listenForCommands(ctx context.Context) {
 func (s *Service) handleCommand(ctx context.Context, payload string) {
 	var cmd SlackCommand
 	if err := json.Unmarshal([]byte(payload), &cmd); err != nil {
-		log.Printf("Failed to parse command: %v", err)
+		slog.Error("Failed to parse command", "error", err)
 		return
 	}
 
@@ -102,19 +102,19 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		return
 	}
 
-	log.Printf("Received /slack-compose command with text: %s", cmd.Text)
+	slog.Info("Received /slack-compose command", "text", cmd.Text)
 
 	// Extract project name from command text
 	projectName := strings.TrimSpace(cmd.Text)
 	if projectName == "" {
-		log.Println("No project name provided")
+		slog.Warn("No project name provided in command")
 		return
 	}
 
 	// Check if project exists in config
 	project, exists := s.config.Projects[projectName]
 	if !exists {
-		log.Printf("Unknown project: %s", projectName)
+		slog.Warn("Unknown project requested", "project", projectName)
 		return
 	}
 
@@ -137,11 +137,11 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 	}
 
 	if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
-		log.Printf("Failed to send to Poppit: %v", err)
+		slog.Error("Failed to send to Poppit", "error", err, "project", projectName)
 		return
 	}
 
-	log.Printf("Sent docker compose ps command for project %s (task: %s)", projectName, taskID)
+	slog.Info("Sent docker compose ps command", "project", projectName, "task", taskID)
 }
 
 // listenForPoppitOutput listens for command output from Poppit
@@ -151,7 +151,7 @@ func (s *Service) listenForPoppitOutput(ctx context.Context) {
 	pubsub := s.redisClient.Subscribe(ctx, s.config.PoppitOutputChannel)
 	defer pubsub.Close()
 
-	log.Printf("Listening for Poppit output on channel: %s", s.config.PoppitOutputChannel)
+	slog.Info("Listening for Poppit output", "channel", s.config.PoppitOutputChannel)
 
 	ch := pubsub.Channel()
 	for {
@@ -160,7 +160,7 @@ func (s *Service) listenForPoppitOutput(ctx context.Context) {
 			return
 		case msg := <-ch:
 			if msg == nil {
-				log.Printf("Received nil message from Poppit output channel, possible connection issue")
+				slog.Warn("Received nil message from Poppit output channel, possible connection issue")
 				continue
 			}
 			s.handlePoppitOutput(ctx, msg.Payload)
@@ -172,11 +172,11 @@ func (s *Service) listenForPoppitOutput(ctx context.Context) {
 func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 	var cmdOutput PoppitCommandOutput
 	if err := json.Unmarshal([]byte(payload), &cmdOutput); err != nil {
-		log.Printf("Failed to parse Poppit output: %v", err)
+		slog.Error("Failed to parse Poppit output", "error", err)
 		return
 	}
 
-	log.Printf("Received output for task %s: command=%s", cmdOutput.TaskID, cmdOutput.Command)
+	slog.Debug("Received output for task", "task", cmdOutput.TaskID, "command", cmdOutput.Command)
 
 	// Only handle output for slack-compose type
 	if cmdOutput.Type != "slack-compose" {
@@ -196,7 +196,7 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 	}()
 
 	if !exists {
-		log.Printf("Warning: Task %s not found in task map, project name will not be included in metadata", cmdOutput.TaskID)
+		slog.Warn("Task not found in task map, project name will not be included in metadata", "task", cmdOutput.TaskID)
 	}
 
 	// Build metadata with project name if available
@@ -218,11 +218,11 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
-		log.Printf("Failed to send to SlackLiner: %v", err)
+		slog.Error("Failed to send to SlackLiner", "error", err, "task", cmdOutput.TaskID)
 		return
 	}
 
-	log.Printf("Sent output to SlackLiner for task %s", cmdOutput.TaskID)
+	slog.Info("Sent output to SlackLiner", "task", cmdOutput.TaskID)
 }
 
 // listenForReactions listens for emoji reactions from SlackRelay
@@ -232,7 +232,7 @@ func (s *Service) listenForReactions(ctx context.Context) {
 	pubsub := s.redisClient.Subscribe(ctx, s.config.SlackReactionChannel)
 	defer pubsub.Close()
 
-	log.Printf("Listening for reactions on channel: %s", s.config.SlackReactionChannel)
+	slog.Info("Listening for reactions", "channel", s.config.SlackReactionChannel)
 
 	ch := pubsub.Channel()
 	for {
@@ -252,45 +252,47 @@ func (s *Service) listenForReactions(ctx context.Context) {
 func (s *Service) handleReaction(ctx context.Context, payload string) {
 	var reaction SlackReaction
 	if err := json.Unmarshal([]byte(payload), &reaction); err != nil {
-		log.Printf("Failed to parse reaction: %v", err)
+		slog.Error("Failed to parse reaction", "error", err)
 		return
 	}
 
-	log.Printf("Received reaction: %s on message %s in channel %s", reaction.Event.Reaction, reaction.Event.Item.TS, reaction.Event.Item.Channel)
+	slog.Debug("Received reaction", "emoji", reaction.Event.Reaction, "message", reaction.Event.Item.TS, "channel", reaction.Event.Item.Channel)
 
 	// Check if this is a supported reaction
+	// Unsupported reactions are logged at DEBUG level to avoid cluttering logs with reactions we don't care about
 	command, supported := emojiToCommand[reaction.Event.Reaction]
 	if !supported {
+		slog.Debug("Unsupported reaction, ignoring", "emoji", reaction.Event.Reaction)
 		return
 	}
 
 	// Retrieve message from Slack to get metadata
 	message, err := s.slackClient.GetMessage(ctx, reaction.Event.Item.Channel, reaction.Event.Item.TS)
 	if err != nil {
-		log.Printf("Failed to retrieve message: %v", err)
+		slog.Error("Failed to retrieve message", "error", err)
 		return
 	}
 
 	// Parse metadata
 	if message.Metadata.EventType != "slack-compose" {
-		log.Printf("Message is not a slack-compose event, ignoring")
+		slog.Debug("Message is not a slack-compose event, ignoring")
 		return
 	}
 
 	projectName, ok := message.Metadata.EventPayload["project"].(string)
 	if !ok || projectName == "" {
-		log.Printf("No project name in metadata")
+		slog.Warn("No project name in metadata")
 		return
 	}
 
 	// Check if project exists
 	project, exists := s.config.Projects[projectName]
 	if !exists {
-		log.Printf("Unknown project in metadata: %s", projectName)
+		slog.Warn("Unknown project in metadata", "project", projectName)
 		return
 	}
 
-	log.Printf("Executing %s for project %s", command, projectName)
+	slog.Info("Executing command for project", "command", command, "project", projectName)
 
 	// Generate new task ID
 	taskID := fmt.Sprintf("task-%s", uuid.New().String())
@@ -306,11 +308,11 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	}
 
 	if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
-		log.Printf("Failed to send to Poppit: %v", err)
+		slog.Error("Failed to send to Poppit", "error", err, "project", projectName)
 		return
 	}
 
-	log.Printf("Sent %s command for project %s (task: %s)", command, projectName, taskID)
+	slog.Info("Sent command to Poppit", "command", command, "project", projectName, "task", taskID)
 }
 
 // Wait waits for all goroutines to finish

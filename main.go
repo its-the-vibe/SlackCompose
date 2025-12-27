@@ -2,25 +2,30 @@ package main
 
 import (
 	"context"
-	"log"
+	"log/slog"
 	"os"
 	"os/signal"
 	"syscall"
 )
 
 func main() {
-	log.Println("Starting SlackCompose service...")
+	// Initialize logger
+	initLogger()
+
+	slog.Info("Starting SlackCompose service...")
 
 	// Load configuration
 	config, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("Failed to load configuration: %v", err)
+		slog.Error("Failed to load configuration", "error", err)
+		os.Exit(1)
 	}
 
 	// Create Redis client
 	redisClient, err := NewRedisClient(config)
 	if err != nil {
-		log.Fatalf("Failed to create Redis client: %v", err)
+		slog.Error("Failed to create Redis client", "error", err)
+		os.Exit(1)
 	}
 	defer redisClient.Close()
 
@@ -32,7 +37,8 @@ func main() {
 	defer cancel()
 
 	if err := service.Start(ctx); err != nil {
-		log.Fatalf("Failed to start service: %v", err)
+		slog.Error("Failed to start service", "error", err)
+		os.Exit(1)
 	}
 
 	// Wait for interrupt signal
@@ -40,6 +46,30 @@ func main() {
 	signal.Notify(sigChan, os.Interrupt, syscall.SIGTERM)
 	<-sigChan
 
-	log.Println("Shutting down SlackCompose service...")
+	slog.Info("Shutting down SlackCompose service...")
 	cancel()
+}
+
+// initLogger initializes the structured logger with the configured level
+func initLogger() {
+	logLevel := os.Getenv("LOG_LEVEL")
+	var level slog.Level
+
+	switch logLevel {
+	case "DEBUG":
+		level = slog.LevelDebug
+	case "INFO":
+		level = slog.LevelInfo
+	case "WARN":
+		level = slog.LevelWarn
+	case "ERROR":
+		level = slog.LevelError
+	default:
+		level = slog.LevelInfo // Default to INFO
+	}
+
+	handler := slog.NewTextHandler(os.Stdout, &slog.HandlerOptions{
+		Level: level,
+	})
+	slog.SetDefault(slog.New(handler))
 }
