@@ -122,7 +122,7 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		Branch:   "refs/heads/main",
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
-		Commands: []string{"docker compose ps --format json"},
+		Commands: []string{"docker compose ps"},
 		Metadata: map[string]interface{}{
 			"project": projectName,
 		},
@@ -197,7 +197,7 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 
 	slackLinerPayload := SlackLinerPayload{
 		Channel: s.config.SlackChannel,
-		Text:    fmt.Sprintf("```\n%s\n```", cmdOutput.Output),
+		Text:    fmt.Sprintf("*Project:* %s\n*Command:* `%s`\n```\n%s\n```", projectName, cmdOutput.Command, cmdOutput.Output),
 		Metadata: SlackMetadata{
 			EventType:    "slack-compose",
 			EventPayload: eventPayload,
