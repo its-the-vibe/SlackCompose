@@ -183,7 +183,9 @@ SlackCompose sends commands to Poppit by pushing JSON payloads to a Redis list (
   "commands": [
     "docker compose ps"
   ],
-  "taskId": "task-12345"
+  "metadata": {
+    "project": "<project name>"
+  }
 }
 ```
 
@@ -191,10 +193,12 @@ Poppit executes the commands and publishes output to a Redis Pub/Sub channel (de
 
 ```json
 {
-  "taskId": "task-12345",
   "type": "slack-compose",
   "command": "docker compose ps",
-  "output": "<command output>"
+  "output": "<command output>",
+  "metadata": {
+    "project": "<project name>"
+  }
 }
 ```
 
@@ -209,7 +213,6 @@ SlackCompose sends messages to SlackLiner by pushing JSON payloads to a Redis li
   "metadata": {
     "event_type": "slack-compose",
     "event_payload": {
-      "taskId": "task-12345",
       "project": "<project name>",
       "command": "docker compose ps"
     }
@@ -239,11 +242,10 @@ The service is organized into the following components:
    - Pub/Sub channels for event notifications (commands, reactions, output)
    - Redis lists (RPUSH) for queuing messages to Poppit and SlackLiner
    - Decoupled communication between all services
-2. **Metadata Tracking**: Slack message metadata links reactions to original projects
-3. **Task Mapping**: In-memory map tracks taskID to projectName for correlating Poppit output
-4. **UUID Task IDs**: Each command execution gets a unique task ID for tracking
-5. **Scratch Image**: Final Docker image uses scratch for minimal size (~11MB binary)
-6. **Graceful Shutdown**: Context-based cancellation for clean service shutdown
+2. **Metadata Tracking**: Project information is passed through Poppit's metadata field, making the service stateless
+3. **Slack Message Metadata**: Slack message metadata links reactions to original projects
+4. **Scratch Image**: Final Docker image uses scratch for minimal size (~11MB binary)
+5. **Graceful Shutdown**: Context-based cancellation for clean service shutdown
 
 ### Project Configuration
 
