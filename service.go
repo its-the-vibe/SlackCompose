@@ -177,9 +177,17 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 
 	// Extract project name from metadata
 	projectName := ""
+	threadTS := ""
+	channel := ""
 	if cmdOutput.Metadata != nil {
 		if proj, ok := cmdOutput.Metadata["project"].(string); ok {
 			projectName = proj
+		}
+		if ts, ok := cmdOutput.Metadata["thread_ts"].(string); ok {
+			threadTS = ts
+		}
+		if ch, ok := cmdOutput.Metadata["channel"].(string); ok {
+			channel = ch
 		}
 	}
 
@@ -195,14 +203,21 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 		eventPayload["project"] = projectName
 	}
 
+	// Use the channel from metadata if available, otherwise use default
+	targetChannel := s.config.SlackChannel
+	if channel != "" {
+		targetChannel = channel
+	}
+
 	slackLinerPayload := SlackLinerPayload{
-		Channel: s.config.SlackChannel,
+		Channel: targetChannel,
 		Text:    fmt.Sprintf("*Project:* %s\n*Command:* `%s`\n```\n%s\n```", projectName, cmdOutput.Command, cmdOutput.Output),
 		Metadata: SlackMetadata{
 			EventType:    "slack-compose",
 			EventPayload: eventPayload,
 		},
-		TTL: DefaultTTLSeconds,
+		TTL:      DefaultTTLSeconds,
+		ThreadTS: threadTS, // If set, this will post as a reply to the thread
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
@@ -283,6 +298,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	slog.Info("Executing command for project", "command", command, "project", projectName)
 
 	// Send command to Poppit
+	// Include thread_ts and channel so the response can be posted as a reply
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
 		Branch:   "refs/heads/main",
@@ -290,7 +306,9 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 		Dir:      project.WorkingDir,
 		Commands: []string{command},
 		Metadata: map[string]interface{}{
-			"project": projectName,
+			"project":   projectName,
+			"thread_ts": reaction.Event.Item.TS,
+			"channel":   reaction.Event.Item.Channel,
 		},
 	}
 

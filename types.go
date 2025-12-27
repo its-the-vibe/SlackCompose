@@ -46,7 +46,8 @@ type SlackLinerPayload struct {
 	Channel  string        `json:"channel"`
 	Text     string        `json:"text"`
 	Metadata SlackMetadata `json:"metadata"`
-	TTL      int           `json:"ttl,omitempty"` // Time to live in seconds
+	TTL      int           `json:"ttl,omitempty"`       // Time to live in seconds
+	ThreadTS string        `json:"thread_ts,omitempty"` // Thread timestamp for posting replies
 }
 
 // SlackMetadata contains metadata for Slack messages
