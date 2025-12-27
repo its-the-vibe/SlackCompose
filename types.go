@@ -33,12 +33,12 @@ type SlackReactionItem struct {
 
 // PoppitPayload is the payload sent to Poppit service
 type PoppitPayload struct {
-	Repo     string   `json:"repo"`
-	Branch   string   `json:"branch"`
-	Type     string   `json:"type"`
-	Dir      string   `json:"dir"`
-	Commands []string `json:"commands"`
-	TaskID   string   `json:"taskId"`
+	Repo     string                 `json:"repo"`
+	Branch   string                 `json:"branch"`
+	Type     string                 `json:"type"`
+	Dir      string                 `json:"dir"`
+	Commands []string               `json:"commands"`
+	Metadata map[string]interface{} `json:"metadata"`
 }
 
 // SlackLinerPayload is the payload sent to SlackLiner service
@@ -64,8 +64,8 @@ type SlackMessage struct {
 
 // PoppitCommandOutput represents output from Poppit command execution
 type PoppitCommandOutput struct {
-	TaskID  string `json:"taskId"`
-	Type    string `json:"type"`
-	Command string `json:"command"`
-	Output  string `json:"output"`
+	Type     string                 `json:"type"`
+	Command  string                 `json:"command"`
+	Output   string                 `json:"output"`
+	Metadata map[string]interface{} `json:"metadata"`
 }

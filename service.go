@@ -7,8 +7,6 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
-
-	"github.com/google/uuid"
 )
 
 const (
@@ -31,8 +29,6 @@ type Service struct {
 	config      *Config
 	redisClient *RedisClient
 	slackClient *SlackClient
-	taskMap     map[string]string // maps taskID to projectName
-	taskMapMu   sync.RWMutex
 	wg          sync.WaitGroup
 }
 
@@ -42,7 +38,6 @@ func NewService(config *Config, redisClient *RedisClient) *Service {
 		config:      config,
 		redisClient: redisClient,
 		slackClient: NewSlackClient(config.SlackToken),
-		taskMap:     make(map[string]string),
 	}
 }
 
@@ -118,14 +113,6 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		return
 	}
 
-	// Generate task ID
-	taskID := fmt.Sprintf("task-%s", uuid.New().String())
-
-	// Store task-to-project mapping
-	s.taskMapMu.Lock()
-	s.taskMap[taskID] = projectName
-	s.taskMapMu.Unlock()
-
 	// Send docker compose ps command to Poppit
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
@@ -133,7 +120,9 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
 		Commands: []string{"docker compose ps"},
-		TaskID:   taskID,
+		Metadata: map[string]interface{}{
+			"project": projectName,
+		},
 	}
 
 	if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
@@ -141,7 +130,7 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 		return
 	}
 
-	slog.Info("Sent docker compose ps command", "project", projectName, "task", taskID)
+	slog.Info("Sent docker compose ps command", "project", projectName)
 }
 
 // listenForPoppitOutput listens for command output from Poppit
@@ -176,32 +165,27 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 		return
 	}
 
-	slog.Debug("Received output for task", "task", cmdOutput.TaskID, "command", cmdOutput.Command)
+	slog.Debug("Received output", "command", cmdOutput.Command)
 
 	// Only handle output for slack-compose type
 	if cmdOutput.Type != "slack-compose" {
 		return
 	}
 
-	// Retrieve project name from task map
-	s.taskMapMu.RLock()
-	projectName, exists := s.taskMap[cmdOutput.TaskID]
-	s.taskMapMu.RUnlock()
-
-	// Clean up task map regardless of success or failure
-	defer func() {
-		s.taskMapMu.Lock()
-		delete(s.taskMap, cmdOutput.TaskID)
-		s.taskMapMu.Unlock()
-	}()
-
-	if !exists {
-		slog.Warn("Task not found in task map, project name will not be included in metadata", "task", cmdOutput.TaskID)
+	// Extract project name from metadata
+	projectName := ""
+	if cmdOutput.Metadata != nil {
+		if proj, ok := cmdOutput.Metadata["project"].(string); ok {
+			projectName = proj
+		}
 	}
 
-	// Build metadata with project name if available
+	if projectName == "" {
+		slog.Warn("No project name in metadata")
+	}
+
+	// Build metadata for SlackLiner
 	eventPayload := map[string]interface{}{
-		"taskId":  cmdOutput.TaskID,
 		"command": cmdOutput.Command,
 	}
 	if projectName != "" {
@@ -218,11 +202,11 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
-		slog.Error("Failed to send to SlackLiner", "error", err, "task", cmdOutput.TaskID)
+		slog.Error("Failed to send to SlackLiner", "error", err)
 		return
 	}
 
-	slog.Info("Sent output to SlackLiner", "task", cmdOutput.TaskID)
+	slog.Info("Sent output to SlackLiner", "project", projectName)
 }
 
 // listenForReactions listens for emoji reactions from SlackRelay
@@ -294,9 +278,6 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 
 	slog.Info("Executing command for project", "command", command, "project", projectName)
 
-	// Generate new task ID
-	taskID := fmt.Sprintf("task-%s", uuid.New().String())
-
 	// Send command to Poppit
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
@@ -304,7 +285,9 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
 		Commands: []string{command},
-		TaskID:   taskID,
+		Metadata: map[string]interface{}{
+			"project": projectName,
+		},
 	}
 
 	if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
@@ -312,7 +295,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 		return
 	}
 
-	slog.Info("Sent command to Poppit", "command", command, "project", projectName, "task", taskID)
+	slog.Info("Sent command to Poppit", "command", command, "project", projectName)
 }
 
 // Wait waits for all goroutines to finish
