@@ -13,6 +13,7 @@ SlackCompose is a Go service that enables running Docker Compose commands from S
 
 ## Architecture Flow
 
+### With Project Name
 ```
 User in Slack → /slack-compose <project>
        ↓
@@ -39,9 +40,38 @@ SlackCompose → Redis List RPUSH (poppit:notifications)
 Poppit executes: docker compose up/down/restart/logs
 ```
 
+### Without Project Name (Block Kit Dialog)
+```
+User in Slack → /slack-compose (no project)
+       ↓
+SlackCommandRelay → Redis Pub/Sub (slack-commands)
+       ↓
+SlackCompose → Redis List RPUSH (slack_messages)
+       ↓
+SlackLiner posts Block Kit dialog to Slack
+       ↓
+User selects project & clicks action button
+       ↓
+SlackRelay → Redis Pub/Sub (slack-relay-block-actions)
+       ↓
+SlackCompose → Redis List RPUSH (poppit:notifications)
+       ↓
+Poppit executes: docker compose command
+       ↓
+Poppit → Redis Pub/Sub (poppit:command-output)
+       ↓
+SlackCompose → Redis List RPUSH (slack_messages)
+       ↓
+SlackLiner posts output as thread reply
+```
+
 ## Features
 
 - Execute `docker compose ps` via Slack command `/slack-compose <project-name>`
+- Interactive Block Kit dialog when no project specified with `/slack-compose`
+  - Project selection via external select dropdown
+  - Action buttons for docker compose commands (up, down, restart, ps, logs)
+  - Commands execute as thread replies to the dialog message
 - Control projects via emoji reactions:
   - ⬆️ (up_arrow) - runs `docker compose up -d`
   - ⬇️ (down_arrow) - runs `docker compose down`
@@ -61,6 +91,7 @@ Poppit executes: docker compose up/down/restart/logs
 | `REDIS_DB` | Redis database number | `0` |
 | `SLACK_COMMAND_CHANNEL` | Redis Pub/Sub channel for Slack commands | `slack-commands` |
 | `SLACK_REACTION_CHANNEL` | Redis Pub/Sub channel for Slack reactions | `slack-reactions` |
+| `SLACK_BLOCK_ACTIONS_CHANNEL` | Redis Pub/Sub channel for Slack block actions | `slack-relay-block-actions` |
 | `POPPIT_LIST_NAME` | Redis list name for Poppit notifications | `poppit:notifications` |
 | `POPPIT_OUTPUT_CHANNEL` | Redis Pub/Sub channel for Poppit command output | `poppit:command-output` |
 | `SLACKLINER_LIST_NAME` | Redis list name for SlackLiner messages | `slack_messages` |
@@ -153,11 +184,28 @@ export REDIS_PASSWORD=your-redis-password
 
 In Slack, use the `/slack-compose` command:
 
+**With a project name:**
 ```
 /slack-compose my-project
 ```
 
 This will execute `docker compose ps` for the specified project and post the output to the configured Slack channel.
+
+**Without a project name (Block Kit Dialog):**
+```
+/slack-compose
+```
+
+This displays an interactive Block Kit dialog where you can:
+1. Select a project from the external select dropdown
+2. Click action buttons to execute docker compose commands:
+   - **⬆️ Up** - runs `docker compose up -d`
+   - **🔄 Restart** - runs `docker compose restart`
+   - **⬇️ Down** - runs `docker compose down`
+   - **📊 Process Status** - runs `docker compose ps`
+   - **📄 View Logs** - runs `docker compose logs`
+
+Command outputs are posted as thread replies to the dialog message.
 
 ### Via Emoji Reactions
 
@@ -206,6 +254,7 @@ Poppit executes the commands and publishes output to a Redis Pub/Sub channel (de
 
 SlackCompose sends messages to SlackLiner by pushing JSON payloads to a Redis list (default: `slack_messages`):
 
+**Text messages:**
 ```json
 {
   "channel": "#slack-compose",
@@ -221,7 +270,83 @@ SlackCompose sends messages to SlackLiner by pushing JSON payloads to a Redis li
 }
 ```
 
+**Block Kit messages:**
+```json
+{
+  "channel": "#slack-compose",
+  "blocks": [
+    {
+      "type": "section",
+      "text": {
+        "type": "mrkdwn",
+        "text": "Select a project..."
+      }
+    },
+    {
+      "type": "input",
+      "block_id": "project_block",
+      "element": {
+        "type": "external_select",
+        "action_id": "SlackCompose",
+        "placeholder": {
+          "type": "plain_text",
+          "text": "Search projects..."
+        }
+      }
+    }
+  ],
+  "ttl": 86400
+}
+```
+
 The metadata allows emoji reactions on messages to be linked back to the original project for executing follow-up commands. Messages have a default TTL of 24 hours (86400 seconds).
+
+### SlackRelay Integration
+
+SlackRelay publishes block action events to a Redis Pub/Sub channel (default: `slack-relay-block-actions`):
+
+```json
+{
+  "type": "block_actions",
+  "actions": [
+    {
+      "action_id": "docker_logs",
+      "block_id": "m8VaW",
+      "type": "button",
+      "value": "logs"
+    }
+  ],
+  "state": {
+    "values": {
+      "project_block": {
+        "SlackCompose": {
+          "type": "external_select",
+          "selected_option": {
+            "text": {
+              "type": "plain_text",
+              "text": "InnerGate"
+            },
+            "value": "InnerGate"
+          }
+        }
+      }
+    }
+  },
+  "message": {
+    "ts": "1234567890.123456"
+  },
+  "channel": {
+    "id": "C1234567890",
+    "name": "slack-compose"
+  }
+}
+```
+
+SlackCompose listens for these events and:
+1. Extracts the selected project from the `state.values.project_block.SlackCompose.selected_option.value` field
+2. Identifies the action from the `actions[].action_id` field (must be type "button")
+3. Executes the corresponding docker compose command via Poppit
+4. Posts output as a thread reply to the original message (using `message.ts` as `thread_ts`)
 
 ## Implementation Notes
 
