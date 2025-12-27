@@ -216,11 +216,12 @@ SlackCompose sends messages to SlackLiner by pushing JSON payloads to a Redis li
       "project": "<project name>",
       "command": "docker compose ps"
     }
-  }
+  },
+  "ttl": 86400
 }
 ```
 
-The metadata allows emoji reactions on messages to be linked back to the original project for executing follow-up commands.
+The metadata allows emoji reactions on messages to be linked back to the original project for executing follow-up commands. Messages have a default TTL of 24 hours (86400 seconds).
 
 ## Implementation Notes
 

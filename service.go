@@ -199,6 +199,7 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 			EventType:    "slack-compose",
 			EventPayload: eventPayload,
 		},
+		TTL: 86400, // 24 hours in seconds
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
