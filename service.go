@@ -217,7 +217,7 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 			EventPayload: eventPayload,
 		},
 		TTL:      DefaultTTLSeconds,
-		ThreadTS: threadTS, // If set, this will post as a reply to the thread
+		ThreadTS: threadTS,
 	}
 
 	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
@@ -298,7 +298,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	slog.Info("Executing command for project", "command", command, "project", projectName)
 
 	// Send command to Poppit
-	// Include thread_ts and channel so the response can be posted as a reply
+	// Include thread_ts and channel metadata to enable posting command output as thread replies in the correct channel
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
 		Branch:   "refs/heads/main",
