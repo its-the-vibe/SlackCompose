@@ -388,6 +388,13 @@ func (s *Service) Wait() {
 func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
 	// Create block kit blocks using slack-go/slack types
 	minQueryLength := 0
+	externalSelect := slack.NewOptionsSelectBlockElement(
+		slack.OptTypeExternal,
+		slack.NewTextBlockObject(slack.PlainTextType, "Search projects...", false, false),
+		ActionIDSlackCompose,
+	)
+	externalSelect.MinQueryLength = &minQueryLength
+
 	blocks := []slack.Block{
 		// Section with instructions
 		slack.NewSectionBlock(
@@ -400,12 +407,7 @@ func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
 			BlockIDProjectBlock,
 			slack.NewTextBlockObject(slack.PlainTextType, "Project / Repository", false, false),
 			nil,
-			&slack.SelectBlockElement{
-				Type:           slack.OptTypeExternal,
-				ActionID:       ActionIDSlackCompose,
-				Placeholder:    slack.NewTextBlockObject(slack.PlainTextType, "Search projects...", false, false),
-				MinQueryLength: &minQueryLength,
-			},
+			externalSelect,
 		),
 		// Divider
 		slack.NewDividerBlock(),
