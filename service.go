@@ -7,6 +7,8 @@ import (
 	"log/slog"
 	"strings"
 	"sync"
+
+	"github.com/slack-go/slack"
 )
 
 const (
@@ -384,106 +386,74 @@ func (s *Service) Wait() {
 
 // sendBlockKitDialog sends a block kit dialog to the user
 func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
-	// Create block kit blocks as per the specification
-	blocks := []map[string]interface{}{
-		{
-			"type": "section",
-			"text": map[string]interface{}{
-				"type": "mrkdwn",
-				"text": "Select a project from your GitHub repositories to manage its containers.",
+	// Create block kit blocks using slack-go/slack types
+	minQueryLength := 0
+	blocks := []slack.Block{
+		// Section with instructions
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, "Select a project from your GitHub repositories to manage its containers.", false, false),
+			nil,
+			nil,
+		),
+		// Input block with external select for project selection
+		slack.NewInputBlock(
+			BlockIDProjectBlock,
+			slack.NewTextBlockObject(slack.PlainTextType, "Project / Repository", false, false),
+			nil,
+			&slack.SelectBlockElement{
+				Type:           slack.OptTypeExternal,
+				ActionID:       ActionIDSlackCompose,
+				Placeholder:    slack.NewTextBlockObject(slack.PlainTextType, "Search projects...", false, false),
+				MinQueryLength: &minQueryLength,
 			},
-		},
-		{
-			"type":     "input",
-			"block_id": BlockIDProjectBlock,
-			"element": map[string]interface{}{
-				"type":      "external_select",
-				"action_id": ActionIDSlackCompose,
-				"placeholder": map[string]interface{}{
-					"type": "plain_text",
-					"text": "Search projects...",
-				},
-				"min_query_length": 0,
-			},
-			"label": map[string]interface{}{
-				"type": "plain_text",
-				"text": "Project / Repository",
-			},
-		},
-		{
-			"type": "divider",
-		},
-		{
-			"type": "section",
-			"text": map[string]interface{}{
-				"type": "mrkdwn",
-				"text": "*Lifecycle Actions*",
-			},
-		},
-		{
-			"type": "actions",
-			"elements": []map[string]interface{}{
-				{
-					"type": "button",
-					"text": map[string]interface{}{
-						"type": "plain_text",
-						"text": ":arrow_up: Up",
-					},
-					"style":     "primary",
-					"value":     "up",
-					"action_id": ActionDockerUp,
-				},
-				{
-					"type": "button",
-					"text": map[string]interface{}{
-						"type": "plain_text",
-						"text": ":arrows_counterclockwise: Restart",
-					},
-					"value":     "restart",
-					"action_id": ActionDockerRestart,
-				},
-				{
-					"type": "button",
-					"text": map[string]interface{}{
-						"type": "plain_text",
-						"text": ":arrow_down: Down",
-					},
-					"style":     "danger",
-					"value":     "down",
-					"action_id": ActionDockerDown,
-				},
-			},
-		},
-		{
-			"type": "section",
-			"text": map[string]interface{}{
-				"type": "mrkdwn",
-				"text": "*Observation*",
-			},
-		},
-		{
-			"type": "actions",
-			"elements": []map[string]interface{}{
-				{
-					"type": "button",
-					"text": map[string]interface{}{
-						"type": "plain_text",
-						"text": ":chart_with_upwards_trend: Process Status",
-					},
-					"value":     "ps",
-					"action_id": ActionDockerPS,
-				},
-				{
-					"type": "button",
-					"text": map[string]interface{}{
-						"type": "plain_text",
-						"text": ":page_facing_up: View Logs",
-					},
-					"value":     "logs",
-					"action_id": ActionDockerLogs,
-				},
-			},
-		},
+		),
+		// Divider
+		slack.NewDividerBlock(),
+		// Lifecycle actions section header
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, "*Lifecycle Actions*", false, false),
+			nil,
+			nil,
+		),
+		// Lifecycle action buttons
+		slack.NewActionBlock(
+			"",
+			slack.NewButtonBlockElement(
+				ActionDockerUp,
+				"up",
+				slack.NewTextBlockObject(slack.PlainTextType, ":arrow_up: Up", false, false),
+			).WithStyle(slack.StylePrimary),
+			slack.NewButtonBlockElement(
+				ActionDockerRestart,
+				"restart",
+				slack.NewTextBlockObject(slack.PlainTextType, ":arrows_counterclockwise: Restart", false, false),
+			),
+			slack.NewButtonBlockElement(
+				ActionDockerDown,
+				"down",
+				slack.NewTextBlockObject(slack.PlainTextType, ":arrow_down: Down", false, false),
+			).WithStyle(slack.StyleDanger),
+		),
+		// Observation section header
+		slack.NewSectionBlock(
+			slack.NewTextBlockObject(slack.MarkdownType, "*Observation*", false, false),
+			nil,
+			nil,
+		),
+		// Observation action buttons
+		slack.NewActionBlock(
+			"",
+			slack.NewButtonBlockElement(
+				ActionDockerPS,
+				"ps",
+				slack.NewTextBlockObject(slack.PlainTextType, ":chart_with_upwards_trend: Process Status", false, false),
+			),
+			slack.NewButtonBlockElement(
+				ActionDockerLogs,
+				"logs",
+				slack.NewTextBlockObject(slack.PlainTextType, ":page_facing_up: View Logs", false, false),
+			),
+		),
 	}
 
 	slackLinerPayload := SlackLinerPayload{
