@@ -14,13 +14,14 @@ type Config struct {
 	RedisDB       int
 
 	// Service configuration
-	SlackCommandChannel  string // Redis channel to listen for Slack commands
-	SlackReactionChannel string // Redis channel to listen for Slack reactions
-	PoppitListName       string // Redis list name for Poppit notifications
-	PoppitOutputChannel  string // Redis channel to listen for Poppit command output
-	SlackLinerListName   string // Redis list name for SlackLiner messages
-	SlackToken           string // Slack API token
-	SlackChannel         string // Slack channel to post to (e.g., #slack-compose)
+	SlackCommandChannel      string // Redis channel to listen for Slack commands
+	SlackReactionChannel     string // Redis channel to listen for Slack reactions
+	SlackBlockActionsChannel string // Redis channel to listen for Slack block actions
+	PoppitListName           string // Redis list name for Poppit notifications
+	PoppitOutputChannel      string // Redis channel to listen for Poppit command output
+	SlackLinerListName       string // Redis list name for SlackLiner messages
+	SlackToken               string // Slack API token
+	SlackChannel             string // Slack channel to post to (e.g., #slack-compose)
 
 	// Project configuration file path
 	ProjectConfigPath string
@@ -38,17 +39,18 @@ type ProjectConfig struct {
 // LoadConfig loads configuration from environment variables
 func LoadConfig() (*Config, error) {
 	config := &Config{
-		RedisAddr:            getEnv("REDIS_ADDR", "localhost:6379"),
-		RedisPassword:        getEnv("REDIS_PASSWORD", ""),
-		RedisDB:              getEnvInt("REDIS_DB", 0),
-		SlackCommandChannel:  getEnv("SLACK_COMMAND_CHANNEL", "slack-commands"),
-		SlackReactionChannel: getEnv("SLACK_REACTION_CHANNEL", "slack-reactions"),
-		PoppitListName:       getEnv("POPPIT_LIST_NAME", "poppit:notifications"),
-		PoppitOutputChannel:  getEnv("POPPIT_OUTPUT_CHANNEL", "poppit:command-output"),
-		SlackLinerListName:   getEnv("SLACKLINER_LIST_NAME", "slack_messages"),
-		SlackToken:           getEnv("SLACK_BOT_TOKEN", ""),
-		SlackChannel:         getEnv("SLACK_CHANNEL", "#slack-compose"),
-		ProjectConfigPath:    getEnv("PROJECT_CONFIG_PATH", "projects.json"),
+		RedisAddr:                getEnv("REDIS_ADDR", "localhost:6379"),
+		RedisPassword:            getEnv("REDIS_PASSWORD", ""),
+		RedisDB:                  getEnvInt("REDIS_DB", 0),
+		SlackCommandChannel:      getEnv("SLACK_COMMAND_CHANNEL", "slack-commands"),
+		SlackReactionChannel:     getEnv("SLACK_REACTION_CHANNEL", "slack-reactions"),
+		SlackBlockActionsChannel: getEnv("SLACK_BLOCK_ACTIONS_CHANNEL", "slack-relay-block-actions"),
+		PoppitListName:           getEnv("POPPIT_LIST_NAME", "poppit:notifications"),
+		PoppitOutputChannel:      getEnv("POPPIT_OUTPUT_CHANNEL", "poppit:command-output"),
+		SlackLinerListName:       getEnv("SLACKLINER_LIST_NAME", "slack_messages"),
+		SlackToken:               getEnv("SLACK_BOT_TOKEN", ""),
+		SlackChannel:             getEnv("SLACK_CHANNEL", "#slack-compose"),
+		ProjectConfigPath:        getEnv("PROJECT_CONFIG_PATH", "projects.json"),
 	}
 
 	// Load project configuration

@@ -15,6 +15,20 @@ const (
 	EmojiArrowsCounterClockwise = "arrows_counterclockwise"
 	EmojiPageFacingUp           = "page_facing_up"
 
+	// Docker compose action IDs
+	ActionDockerUp      = "docker_up"
+	ActionDockerDown    = "docker_down"
+	ActionDockerRestart = "docker_restart"
+	ActionDockerPS      = "docker_ps"
+	ActionDockerLogs    = "docker_logs"
+
+	// Block Kit element IDs
+	BlockIDProjectBlock  = "project_block"
+	ActionIDSlackCompose = "SlackCompose"
+
+	// Git branch reference
+	DefaultGitBranch = "refs/heads/main"
+
 	// DefaultTTLSeconds is the default time-to-live for SlackLiner messages (24 hours)
 	DefaultTTLSeconds = 86400
 )
@@ -25,6 +39,15 @@ var emojiToCommand = map[string]string{
 	EmojiDownArrow:              "docker compose down",
 	EmojiArrowsCounterClockwise: "docker compose restart",
 	EmojiPageFacingUp:           "docker compose logs",
+}
+
+// actionIDToCommand maps block action IDs to their docker compose commands
+var actionIDToCommand = map[string]string{
+	ActionDockerUp:      "docker compose up -d",
+	ActionDockerDown:    "docker compose down",
+	ActionDockerRestart: "docker compose restart",
+	ActionDockerPS:      "docker compose ps",
+	ActionDockerLogs:    "docker compose logs",
 }
 
 // Service is the main service handler
@@ -59,6 +82,10 @@ func (s *Service) Start(ctx context.Context) error {
 	// Start listening for Poppit command output
 	s.wg.Add(1)
 	go s.listenForPoppitOutput(ctx)
+
+	// Start listening for Slack block actions
+	s.wg.Add(1)
+	go s.listenForBlockActions(ctx)
 
 	slog.Info("Service started successfully")
 	return nil
@@ -104,22 +131,26 @@ func (s *Service) handleCommand(ctx context.Context, payload string) {
 
 	// Extract project name from command text
 	projectName := strings.TrimSpace(cmd.Text)
+
+	// Check if project is empty or invalid - display block kit dialog
 	if projectName == "" {
-		slog.Warn("No project name provided in command")
+		slog.Info("No project name provided, showing block kit dialog")
+		s.sendBlockKitDialog(ctx, cmd.ChannelID)
 		return
 	}
 
 	// Check if project exists in config
 	project, exists := s.config.Projects[projectName]
 	if !exists {
-		slog.Warn("Unknown project requested", "project", projectName)
+		slog.Warn("Unknown project requested, showing block kit dialog", "project", projectName)
+		s.sendBlockKitDialog(ctx, cmd.ChannelID)
 		return
 	}
 
 	// Send docker compose ps command to Poppit
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
-		Branch:   "refs/heads/main",
+		Branch:   DefaultGitBranch,
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
 		Commands: []string{"docker compose ps"},
@@ -301,7 +332,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 	// Include thread_ts and channel metadata to enable posting command output as thread replies in the correct channel
 	poppitPayload := PoppitPayload{
 		Repo:     projectName,
-		Branch:   "refs/heads/main",
+		Branch:   DefaultGitBranch,
 		Type:     "slack-compose",
 		Dir:      project.WorkingDir,
 		Commands: []string{command},
@@ -323,4 +354,233 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 // Wait waits for all goroutines to finish
 func (s *Service) Wait() {
 	s.wg.Wait()
+}
+
+// sendBlockKitDialog sends a block kit dialog to the user
+func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
+	// Create block kit blocks as per the specification
+	blocks := []map[string]interface{}{
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": "Select a project from your GitHub repositories to manage its containers.",
+			},
+		},
+		{
+			"type":     "input",
+			"block_id": BlockIDProjectBlock,
+			"element": map[string]interface{}{
+				"type":      "external_select",
+				"action_id": ActionIDSlackCompose,
+				"placeholder": map[string]interface{}{
+					"type": "plain_text",
+					"text": "Search projects...",
+				},
+				"min_query_length": 0,
+			},
+			"label": map[string]interface{}{
+				"type": "plain_text",
+				"text": "Project / Repository",
+			},
+		},
+		{
+			"type": "divider",
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": "*Lifecycle Actions*",
+			},
+		},
+		{
+			"type": "actions",
+			"elements": []map[string]interface{}{
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": ":arrow_up: Up",
+					},
+					"style":     "primary",
+					"value":     "up",
+					"action_id": ActionDockerUp,
+				},
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": ":arrows_counterclockwise: Restart",
+					},
+					"value":     "restart",
+					"action_id": ActionDockerRestart,
+				},
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": ":arrow_down: Down",
+					},
+					"style":     "danger",
+					"value":     "down",
+					"action_id": ActionDockerDown,
+				},
+			},
+		},
+		{
+			"type": "section",
+			"text": map[string]interface{}{
+				"type": "mrkdwn",
+				"text": "*Observation*",
+			},
+		},
+		{
+			"type": "actions",
+			"elements": []map[string]interface{}{
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": ":chart_with_upwards_trend: Process Status",
+					},
+					"value":     "ps",
+					"action_id": ActionDockerPS,
+				},
+				{
+					"type": "button",
+					"text": map[string]interface{}{
+						"type": "plain_text",
+						"text": ":page_facing_up: View Logs",
+					},
+					"value":     "logs",
+					"action_id": ActionDockerLogs,
+				},
+			},
+		},
+	}
+
+	slackLinerPayload := SlackLinerPayload{
+		Channel: channel,
+		Blocks:  blocks,
+		TTL:     DefaultTTLSeconds,
+		Metadata: SlackMetadata{
+			EventType:    "slack-compose-dialog",
+			EventPayload: map[string]interface{}{},
+		},
+	}
+
+	if err := s.sendToSlackLiner(ctx, slackLinerPayload); err != nil {
+		slog.Error("Failed to send block kit dialog to SlackLiner", "error", err)
+		return
+	}
+
+	slog.Info("Sent block kit dialog", "channel", channel)
+}
+
+// listenForBlockActions listens for Slack block actions from SlackRelay
+func (s *Service) listenForBlockActions(ctx context.Context) {
+	defer s.wg.Done()
+
+	pubsub := s.redisClient.Subscribe(ctx, s.config.SlackBlockActionsChannel)
+	defer pubsub.Close()
+
+	slog.Info("Listening for block actions", "channel", s.config.SlackBlockActionsChannel)
+
+	ch := pubsub.Channel()
+	for {
+		select {
+		case <-ctx.Done():
+			return
+		case msg := <-ch:
+			if msg == nil {
+				continue
+			}
+			s.handleBlockAction(ctx, msg.Payload)
+		}
+	}
+}
+
+// handleBlockAction processes block action events
+func (s *Service) handleBlockAction(ctx context.Context, payload string) {
+	var action SlackBlockAction
+	if err := json.Unmarshal([]byte(payload), &action); err != nil {
+		slog.Error("Failed to parse block action", "error", err)
+		return
+	}
+
+	slog.Debug("Received block action", "actions", len(action.Actions))
+
+	// Extract the selected project from state
+	projectName := ""
+	if state, ok := action.State.Values[BlockIDProjectBlock]; ok {
+		if slackCompose, ok := state[ActionIDSlackCompose]; ok {
+			if slackCompose.SelectedOption != nil {
+				projectName = slackCompose.SelectedOption.Value
+				slog.Debug("Extracted project from state", "project", projectName)
+			}
+		}
+	}
+
+	// If no project selected, ignore the action
+	if projectName == "" {
+		slog.Debug("No project selected, ignoring block action")
+		return
+	}
+
+	// Check if project exists
+	project, exists := s.config.Projects[projectName]
+	if !exists {
+		slog.Warn("Unknown project in block action", "project", projectName)
+		return
+	}
+
+	// Process each action
+	for _, act := range action.Actions {
+		// Only process button actions
+		if act.Type != "button" {
+			slog.Debug("Ignoring non-button action", "type", act.Type)
+			continue
+		}
+
+		// Check if this is a known action
+		command, known := actionIDToCommand[act.ActionID]
+		if !known {
+			slog.Debug("Unknown action_id, ignoring", "action_id", act.ActionID)
+			continue
+		}
+
+		slog.Info("Executing command for project", "command", command, "project", projectName, "action_id", act.ActionID)
+
+		// Determine channel and thread_ts
+		channel := ""
+		threadTS := ""
+		if action.Channel.ID != "" {
+			channel = action.Channel.ID
+		}
+		if action.Message.TS != "" {
+			threadTS = action.Message.TS
+		}
+
+		// Send command to Poppit
+		poppitPayload := PoppitPayload{
+			Repo:     projectName,
+			Branch:   DefaultGitBranch,
+			Type:     "slack-compose",
+			Dir:      project.WorkingDir,
+			Commands: []string{command},
+			Metadata: map[string]interface{}{
+				"project":   projectName,
+				"thread_ts": threadTS,
+				"channel":   channel,
+			},
+		}
+
+		if err := s.sendToPoppit(ctx, poppitPayload); err != nil {
+			slog.Error("Failed to send to Poppit", "error", err, "project", projectName)
+			continue
+		}
+
+		slog.Info("Sent command to Poppit", "command", command, "project", projectName)
+	}
 }

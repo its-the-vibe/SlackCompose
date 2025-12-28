@@ -44,8 +44,9 @@ type PoppitPayload struct {
 // SlackLinerPayload is the payload sent to SlackLiner service
 type SlackLinerPayload struct {
 	Channel  string        `json:"channel"`
-	Text     string        `json:"text"`
-	Metadata SlackMetadata `json:"metadata"`
+	Text     string        `json:"text,omitempty"`
+	Blocks   interface{}   `json:"blocks,omitempty"` // Block Kit blocks
+	Metadata SlackMetadata `json:"metadata,omitempty"`
 	TTL      int           `json:"ttl,omitempty"`       // Time to live in seconds
 	ThreadTS string        `json:"thread_ts,omitempty"` // Thread timestamp for posting replies
 }
@@ -70,4 +71,56 @@ type PoppitCommandOutput struct {
 	Command  string                 `json:"command"`
 	Output   string                 `json:"output"`
 	Metadata map[string]interface{} `json:"metadata"`
+}
+
+// SlackBlockAction represents a block action event from SlackRelay
+type SlackBlockAction struct {
+	Type    string               `json:"type"`
+	Actions []BlockActionElement `json:"actions"`
+	State   BlockActionState     `json:"state"`
+	Message BlockActionMessage   `json:"message,omitempty"`
+	Channel BlockActionChannel   `json:"channel,omitempty"`
+}
+
+// BlockActionElement represents an individual action element
+type BlockActionElement struct {
+	ActionID string `json:"action_id"`
+	BlockID  string `json:"block_id"`
+	Type     string `json:"type"`
+	Value    string `json:"value"`
+}
+
+// BlockActionState represents the state of form inputs
+type BlockActionState struct {
+	Values map[string]map[string]BlockActionValue `json:"values"`
+}
+
+// BlockActionValue represents a value from a block action
+type BlockActionValue struct {
+	Type           string             `json:"type"`
+	SelectedOption *BlockActionOption `json:"selected_option"`
+}
+
+// BlockActionOption represents a selected option
+type BlockActionOption struct {
+	Text  BlockActionText `json:"text"`
+	Value string          `json:"value"`
+}
+
+// BlockActionText represents text in a block action
+type BlockActionText struct {
+	Type  string `json:"type"`
+	Text  string `json:"text"`
+	Emoji bool   `json:"emoji,omitempty"`
+}
+
+// BlockActionMessage represents the message containing the block action
+type BlockActionMessage struct {
+	TS string `json:"ts"`
+}
+
+// BlockActionChannel represents the channel where the action occurred
+type BlockActionChannel struct {
+	ID   string `json:"id"`
+	Name string `json:"name"`
 }

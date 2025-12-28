@@ -33,6 +33,7 @@ go.work.sum
 
 # Build artifacts
 slackcompose
+SlackCompose
 
 # Example configs (should be copied without .example suffix)
 projects.json
