@@ -20,5 +20,6 @@ services:
       - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
       - SLACK_CHANNEL=${SLACK_CHANNEL:-#slack-compose}
       - PROJECT_CONFIG_PATH=${PROJECT_CONFIG_PATH:-/config/projects.json}
+      - DOCKER_LOGS_LINE_LIMIT=${DOCKER_LOGS_LINE_LIMIT:-67}
     volumes:
       - ./projects.json:/config/projects.json:ro
