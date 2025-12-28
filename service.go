@@ -67,6 +67,32 @@ func NewService(config *Config, redisClient *RedisClient) *Service {
 	}
 }
 
+// getCommandForEmoji returns the docker compose command for a given emoji reaction
+func (s *Service) getCommandForEmoji(emoji string) (string, bool) {
+	baseCmd, ok := emojiToCommand[emoji]
+	if !ok {
+		return "", false
+	}
+	return s.expandCommand(baseCmd), true
+}
+
+// getCommandForActionID returns the docker compose command for a given action ID
+func (s *Service) getCommandForActionID(actionID string) (string, bool) {
+	baseCmd, ok := actionIDToCommand[actionID]
+	if !ok {
+		return "", false
+	}
+	return s.expandCommand(baseCmd), true
+}
+
+// expandCommand expands docker compose commands with config values
+func (s *Service) expandCommand(cmd string) string {
+	if cmd == "docker compose logs" {
+		return fmt.Sprintf("docker compose logs -n %d", s.config.DockerLogsLineLimit)
+	}
+	return cmd
+}
+
 // Start starts the service
 func (s *Service) Start(ctx context.Context) error {
 	slog.Info("Service starting...")
@@ -294,7 +320,7 @@ func (s *Service) handleReaction(ctx context.Context, payload string) {
 
 	// Check if this is a supported reaction
 	// Unsupported reactions are logged at DEBUG level to avoid cluttering logs with reactions we don't care about
-	command, supported := emojiToCommand[reaction.Event.Reaction]
+	command, supported := s.getCommandForEmoji(reaction.Event.Reaction)
 	if !supported {
 		slog.Debug("Unsupported reaction, ignoring", "emoji", reaction.Event.Reaction)
 		return
@@ -544,7 +570,7 @@ func (s *Service) handleBlockAction(ctx context.Context, payload string) {
 		}
 
 		// Check if this is a known action
-		command, known := actionIDToCommand[act.ActionID]
+		command, known := s.getCommandForActionID(act.ActionID)
 		if !known {
 			slog.Debug("Unknown action_id, ignoring", "action_id", act.ActionID)
 			continue

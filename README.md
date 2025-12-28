@@ -76,7 +76,7 @@ SlackLiner posts output as thread reply
   - ⬆️ (up_arrow) - runs `docker compose up -d`
   - ⬇️ (down_arrow) - runs `docker compose down`
   - 🔄 (arrows_counterclockwise) - runs `docker compose restart`
-  - 📄 (page_facing_up) - runs `docker compose logs`
+  - 📄 (page_facing_up) - runs `docker compose logs -n <limit>` (configurable, default 100 lines)
 - Project configuration via JSON file
 - Built with scratch Docker image for minimal size
 
@@ -98,6 +98,7 @@ SlackLiner posts output as thread reply
 | `SLACK_TOKEN` | Slack API token (required) | - |
 | `SLACK_CHANNEL` | Slack channel to post to | `#slack-compose` |
 | `PROJECT_CONFIG_PATH` | Path to projects configuration file | `projects.json` |
+| `DOCKER_LOGS_LINE_LIMIT` | Number of log lines to retrieve with `docker compose logs` | `100` |
 | `LOG_LEVEL` | Logging level: `DEBUG`, `INFO`, `WARN`, `ERROR` | `INFO` |
 
 ### Project Configuration
@@ -203,7 +204,7 @@ This displays an interactive Block Kit dialog where you can:
    - **🔄 Restart** - runs `docker compose restart`
    - **⬇️ Down** - runs `docker compose down`
    - **📊 Process Status** - runs `docker compose ps`
-   - **📄 View Logs** - runs `docker compose logs`
+   - **📄 View Logs** - runs `docker compose logs -n <limit>` (configurable, default 100 lines)
 
 Command outputs are posted as thread replies to the dialog message.
 
@@ -214,7 +215,7 @@ Once the status is posted to Slack, you can control the project by reacting to t
 - React with ⬆️ to run `docker compose up -d`
 - React with ⬇️ to run `docker compose down`  
 - React with 🔄 to run `docker compose restart`
-- React with 📄 to run `docker compose logs`
+- React with 📄 to run `docker compose logs -n <limit>` (configurable, default 100 lines)
 
 ## Integration Details
 

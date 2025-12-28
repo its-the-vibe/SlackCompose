@@ -26,6 +26,9 @@ type Config struct {
 	// Project configuration file path
 	ProjectConfigPath string
 
+	// Docker compose logs line limit
+	DockerLogsLineLimit int
+
 	// Project mappings (loaded from config file)
 	Projects map[string]ProjectConfig
 }
@@ -51,6 +54,7 @@ func LoadConfig() (*Config, error) {
 		SlackToken:               getEnv("SLACK_BOT_TOKEN", ""),
 		SlackChannel:             getEnv("SLACK_CHANNEL", "#slack-compose"),
 		ProjectConfigPath:        getEnv("PROJECT_CONFIG_PATH", "projects.json"),
+		DockerLogsLineLimit:      getEnvInt("DOCKER_LOGS_LINE_LIMIT", 100),
 	}
 
 	// Load project configuration
