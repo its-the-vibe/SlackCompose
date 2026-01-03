@@ -423,17 +423,17 @@ func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
 			slack.NewButtonBlockElement(
 				ActionDockerUp,
 				"up",
-				slack.NewTextBlockObject(slack.PlainTextType, ":arrow_up: Up", false, false),
+				slack.NewTextBlockObject(slack.PlainTextType, ":arrow_up: Up", true, false),
 			).WithStyle(slack.StylePrimary),
 			slack.NewButtonBlockElement(
 				ActionDockerRestart,
 				"restart",
-				slack.NewTextBlockObject(slack.PlainTextType, ":arrows_counterclockwise: Restart", false, false),
+				slack.NewTextBlockObject(slack.PlainTextType, ":arrows_counterclockwise: Restart", true, false),
 			),
 			slack.NewButtonBlockElement(
 				ActionDockerDown,
 				"down",
-				slack.NewTextBlockObject(slack.PlainTextType, ":arrow_down: Down", false, false),
+				slack.NewTextBlockObject(slack.PlainTextType, ":arrow_down: Down", true, false),
 			).WithStyle(slack.StyleDanger),
 		),
 		// Observation section header
@@ -448,12 +448,12 @@ func (s *Service) sendBlockKitDialog(ctx context.Context, channel string) {
 			slack.NewButtonBlockElement(
 				ActionDockerPS,
 				"ps",
-				slack.NewTextBlockObject(slack.PlainTextType, ":chart_with_upwards_trend: Process Status", false, false),
+				slack.NewTextBlockObject(slack.PlainTextType, ":chart_with_upwards_trend: Process Status", true, false),
 			),
 			slack.NewButtonBlockElement(
 				ActionDockerLogs,
 				"logs",
-				slack.NewTextBlockObject(slack.PlainTextType, ":page_facing_up: View Logs", false, false),
+				slack.NewTextBlockObject(slack.PlainTextType, ":page_facing_up: View Logs", true, false),
 			),
 		),
 	}
