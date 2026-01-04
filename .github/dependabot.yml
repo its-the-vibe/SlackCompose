@@ -9,11 +9,6 @@ updates:
       - "dependencies"
     rebase-strategy: "auto"
 
-  - package-ecosystem: "github-actions"
-    directory: "/"
-    schedule:
-      interval: "weekly"
-
   - package-ecosystem: "docker"
     directory: "/"
     schedule:
