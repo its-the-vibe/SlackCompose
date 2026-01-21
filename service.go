@@ -268,9 +268,22 @@ func (s *Service) handlePoppitOutput(ctx context.Context, payload string) {
 		targetChannel = channel
 	}
 
+	// Build the message text with output and/or stderr
+	messageText := fmt.Sprintf("*Project:* %s\n*Command:* `%s`", projectName, cmdOutput.Command)
+
+	// Only show output if non-empty
+	if cmdOutput.Output != "" {
+		messageText += fmt.Sprintf("\n```\n%s\n```", cmdOutput.Output)
+	}
+
+	// Only show stderr if non-empty
+	if cmdOutput.Stderr != "" {
+		messageText += fmt.Sprintf("\n*Standard Error:*\n```\n%s\n```", cmdOutput.Stderr)
+	}
+
 	slackLinerPayload := SlackLinerPayload{
 		Channel: targetChannel,
-		Text:    fmt.Sprintf("*Project:* %s\n*Command:* `%s`\n```\n%s\n```", projectName, cmdOutput.Command, cmdOutput.Output),
+		Text:    messageText,
 		Metadata: SlackMetadata{
 			EventType:    "slack-compose",
 			EventPayload: eventPayload,

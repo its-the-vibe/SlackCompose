@@ -70,6 +70,7 @@ type PoppitCommandOutput struct {
 	Type     string                 `json:"type"`
 	Command  string                 `json:"command"`
 	Output   string                 `json:"output"`
+	Stderr   string                 `json:"stderr"`
 	Metadata map[string]interface{} `json:"metadata"`
 }
 
