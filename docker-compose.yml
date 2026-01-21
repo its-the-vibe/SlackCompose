@@ -7,7 +7,7 @@ services:
     extra_hosts:
       - "host.docker.internal:host-gateway"
     container_name: slackcompose
-    restart: unless-stopped
+    restart: on-failure:10
     environment:
       - REDIS_ADDR=${REDIS_ADDR:-host.docker.internal:6379}
       - REDIS_PASSWORD=${REDIS_PASSWORD}

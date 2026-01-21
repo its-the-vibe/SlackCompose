@@ -21,6 +21,8 @@ func main() {
 		os.Exit(1)
 	}
 
+	slog.Info("Redis Address", "address", config.RedisAddr)
+
 	// Create Redis client
 	redisClient, err := NewRedisClient(config)
 	if err != nil {
