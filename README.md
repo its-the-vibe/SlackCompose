@@ -1,5 +1,7 @@
 # SlackCompose
 
+[![CI](https://github.com/its-the-vibe/SlackCompose/actions/workflows/ci.yaml/badge.svg)](https://github.com/its-the-vibe/SlackCompose/actions/workflows/ci.yaml)
+
 Run Docker Compose commands from Slack
 
 ## Overview

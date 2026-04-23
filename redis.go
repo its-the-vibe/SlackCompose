@@ -7,6 +7,18 @@ import (
 	"github.com/redis/go-redis/v9"
 )
 
+// PubSubInterface abstracts a Redis pub/sub connection for testability
+type PubSubInterface interface {
+	Channel(opts ...redis.ChannelOption) <-chan *redis.Message
+	Close() error
+}
+
+// RedisClientInterface defines the Redis operations used by the Service
+type RedisClientInterface interface {
+	Subscribe(ctx context.Context, channel string) PubSubInterface
+	RPush(ctx context.Context, key string, value interface{}) error
+}
+
 // RedisClient wraps the Redis client
 type RedisClient struct {
 	client *redis.Client
@@ -30,7 +42,7 @@ func NewRedisClient(config *Config) (*RedisClient, error) {
 }
 
 // Subscribe subscribes to a Redis channel
-func (r *RedisClient) Subscribe(ctx context.Context, channel string) *redis.PubSub {
+func (r *RedisClient) Subscribe(ctx context.Context, channel string) PubSubInterface {
 	return r.client.Subscribe(ctx, channel)
 }
 
