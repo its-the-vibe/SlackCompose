@@ -7,6 +7,11 @@ import (
 	"github.com/slack-go/slack"
 )
 
+// SlackClientInterface defines the Slack operations used by the Service
+type SlackClientInterface interface {
+	GetMessage(ctx context.Context, channel, timestamp string) (*SlackMessage, error)
+}
+
 // SlackClient wraps the Slack API client
 type SlackClient struct {
 	client *slack.Client

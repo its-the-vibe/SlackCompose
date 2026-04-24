@@ -55,13 +55,13 @@ var actionIDToCommand = map[string]string{
 // Service is the main service handler
 type Service struct {
 	config      *Config
-	redisClient *RedisClient
-	slackClient *SlackClient
+	redisClient RedisClientInterface
+	slackClient SlackClientInterface
 	wg          sync.WaitGroup
 }
 
 // NewService creates a new service instance
-func NewService(config *Config, redisClient *RedisClient) *Service {
+func NewService(config *Config, redisClient RedisClientInterface) *Service {
 	return &Service{
 		config:      config,
 		redisClient: redisClient,
